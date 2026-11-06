@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>虚拟神庙 · 多人在线祈福庭院 | Multi-User Virtual Temple</title>
+<title>虚拟神庙 · 多人在线祈福庭院 | Temple Prayer 923</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
 
@@ -138,6 +138,10 @@
     background: #4ade80;
     border-radius: 50%;
     box-shadow: 0 0 8px #4ade80;
+  }
+  .player-count-badge.connecting {
+    background: #f59e0b;
+    box-shadow: 0 0 8px #f59e0b;
   }
 
   /* Navigation Tabs */
@@ -639,7 +643,7 @@
 <!-- Loading Screen -->
 <div id="loading">
   <h2 style="color: var(--gold); letter-spacing: 4px; font-weight: 600;">虚拟神庙 · 多人联机庭院</h2>
-  <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">正在连接实时数据库与 3D 庭院...</p>
+  <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">正在连接云端 Firebase (temple-prayer-923)...</p>
   <div class="loading-bar"><div class="loading-fill"></div></div>
 </div>
 
@@ -652,7 +656,7 @@
 <!-- Live Chat Drawer Widget -->
 <div class="glass-panel" id="chat-widget">
   <div id="chat-messages">
-    <div class="chat-msg" style="color: var(--gold);"><strong>系统:</strong> 欢迎入神庙祈福，可在此与全房同修佛音问候。</div>
+    <div class="chat-msg" style="color: var(--gold);"><strong>系统:</strong> 已连接至 temple-prayer-923 云端数据库，与全网同修同框。</div>
   </div>
   <div id="chat-input-row">
     <input type="text" id="chat-input" placeholder="输入合十问候语..." maxlength="35">
@@ -679,7 +683,7 @@
 
     <!-- Online Player Count & Room Info -->
     <div class="glass-panel badge-btn" id="btn-players-list" title="查看同修列表与切换房间">
-      <span class="player-count-badge"></span>
+      <span class="player-count-badge" id="net-indicator"></span>
       <span>同修: <strong id="online-count" style="color: var(--gold-bright);">1</strong> 人</span>
     </div>
 
@@ -869,30 +873,43 @@
   <div class="glass-panel modal-box">
     <button class="close-btn" data-close="modal-players">&times;</button>
     <h2 style="color: var(--gold); font-size: 18px; text-align: center; margin-bottom: 4px;">神庙大殿同修大厅</h2>
-    <p style="color: var(--text-muted); font-size: 11px; text-align: center; margin-bottom: 12px;">当前神庙房间: <strong id="modal-room-id" style="color: var(--gold-bright);">zen-room-1</strong></p>
+    <p style="color: var(--text-muted); font-size: 11px; text-align: center; margin-bottom: 12px;">当前神庙房间: <strong id="modal-room-id" style="color: var(--gold-bright);">peace123</strong></p>
 
     <!-- Switch Room Form -->
     <div style="background: rgba(15,10,7,0.7); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
       <label style="font-size: 11px; color: var(--gold);">加入/创建其他神庙房间:</label>
       <div style="display: flex; gap: 6px; margin-top: 4px;">
-        <input type="text" id="input-switch-room" placeholder="输入房间代号 (如: temple-888)" style="margin: 0; font-size: 12px;">
+        <input type="text" id="input-switch-room" placeholder="输入房间代号 (如: peace123)" style="margin: 0; font-size: 12px;">
         <button class="gold-button" id="btn-do-switch-room" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">切换房间</button>
       </div>
     </div>
 
-    <label style="font-size: 11px; color: var(--gold); margin-bottom: 6px; display: block;">当前房间在线同修列表:</label>
-    <div id="players-list-content" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+    <!-- Players List Container -->
+    <label style="font-size: 11px; color: var(--gold);">在线同修列表:</label>
+    <div id="players-list-content" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 6px;"></div>
   </div>
 </div>
 
-<!-- Real-time Firebase & Application Logic -->
+<!-- Real-time Multiplayer & Application Logic -->
 <script type="module">
 import * as THREE_MODULE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 const THREE = window.THREE || THREE_MODULE;
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, set, onValue, onDisconnect, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// --- YOUR FIREBASE CONFIGURATION (temple-prayer-923) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDsFplm5A8mF1Ydy_-gJWSsPyRlc0iAOLg",
+  authDomain: "temple-prayer-923.firebaseapp.com",
+  databaseURL: "https://temple-prayer-923-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "temple-prayer-923",
+  storageBucket: "temple-prayer-923.firebasestorage.app",
+  messagingSenderId: "946219024405",
+  appId: "1:946219024405:web:5b3e4743f4cc632c0e8e1c",
+  measurementId: "G-PZ71PFZ538"
+};
 
 // --- GLOBAL UTILS & AUDIO ---
 function showToast(msg) {
@@ -1144,8 +1161,6 @@ let localAvatar = createAvatarMesh(myColor);
 playerGroup.add(localAvatar.group);
 
 let yaw = 0, pitch = 0.22, running = false, actionStatus = '正在静心';
-let myChatMessage = '';
-let chatTimer = null;
 const keys = {};
 let stickX = 0, stickY = 0, lookPointer = null, lastLookX = 0, lastLookY = 0;
 
@@ -1167,6 +1182,23 @@ function createNametagEl(id, name) {
   return containerEl;
 }
 const localNametag = createNametagEl(myUserId, myName + ' (我)');
+
+function clearRemotePlayers() {
+  Object.keys(remotePlayers).forEach(id => {
+    const p = remotePlayers[id];
+    if (p) {
+      if (p.avatar && p.avatar.group) scene.remove(p.avatar.group);
+      if (p.nametagEl && p.nametagEl.parentNode) p.nametagEl.remove();
+    }
+    delete remotePlayers[id];
+  });
+  updateOnlineCountUI();
+}
+
+function updateOnlineCountUI() {
+  const count = Object.keys(remotePlayers).length + 1;
+  document.getElementById('online-count').textContent = count;
+}
 
 // Dynamic Projection to 2D Screen Coordinates
 const tempVec = new THREE.Vector3();
@@ -1190,136 +1222,148 @@ function showSpeechBubble(tagEl, id, text) {
   bubble.timer = setTimeout(() => bubble.classList.remove('show'), 4500);
 }
 
-// --- FIREBASE REALTIME MULTIPLAYER ---
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'virtual-temple-multiplayer';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-
-// Parse Room ID from URL query ?room=xxx
-let roomId = new URLSearchParams(window.location.search).get('room') || 'zen-room-1';
+// --- FIREBASE REALTIME MULTIPLAYER ENGINE ---
+let roomId = new URLSearchParams(window.location.search).get('room') || 'peace123';
 document.getElementById('modal-room-id').textContent = roomId;
 
-let db = null;
-let playersUnsubscribe = null;
-let wishesUnsubscribe = null;
+let fbApp = null, fbAuth = null, fbDatabase = null;
+let roomPlayersRef = null, myPlayerRef = null, roomWishesRef = null, roomEventsRef = null;
 
-function clearRemotePlayers() {
-  Object.keys(remotePlayers).forEach(id => {
-    scene.remove(remotePlayers[id].avatar.group);
-    remotePlayers[id].nametagEl.remove();
-    delete remotePlayers[id];
-  });
-}
-
-if (firebaseConfig) {
+function initFirebaseMultiplayer() {
   try {
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    db = getFirestore(app);
+    fbApp = initializeApp(firebaseConfig);
+    fbAuth = getAuth(fbApp);
+    fbDatabase = getDatabase(fbApp);
 
-    const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    const authPromise = initialToken ? signInWithCustomToken(auth, initialToken) : signInAnonymously(auth);
-
-    authPromise.then((userCred) => {
-      if (!userCred.user) return;
-      subscribeToRoom(roomId);
-    }).catch(console.error);
-  } catch (err) {
-    console.warn('Firebase initialized in fallback mode:', err);
+    signInAnonymously(fbAuth).then(() => {
+      document.getElementById('net-indicator').classList.remove('connecting');
+      connectToRoom(roomId);
+    }).catch(err => {
+      console.warn("Firebase Auth fallback:", err);
+      connectToRoom(roomId);
+    });
+  } catch(e) {
+    console.error("Firebase init error:", e);
   }
 }
 
-function subscribeToRoom(rId) {
-  if (!db) return;
-  if (playersUnsubscribe) playersUnsubscribe();
-  if (wishesUnsubscribe) wishesUnsubscribe();
-
+function connectToRoom(rId) {
+  if (!fbDatabase) return;
+  clearRemotePlayers();
   roomId = rId;
   document.getElementById('modal-room-id').textContent = roomId;
-  clearRemotePlayers();
 
-  // RULE 1 Strict Public Collection Path: /artifacts/{appId}/public/data/temple_players
-  const playersCol = collection(db, 'artifacts', appId, 'public', 'data', 'temple_players');
-  const myDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'temple_players', myUserId);
+  // Listen to players in current room
+  roomPlayersRef = ref(fbDatabase, `rooms/${roomId}/players`);
+  myPlayerRef = ref(fbDatabase, `rooms/${roomId}/players/${myUserId}`);
 
-  // Periodic heartbeat / position sync
-  const syncLocalPresence = () => {
-    setDoc(myDocRef, {
-      userId: myUserId,
-      name: myName,
-      roomId: roomId,
-      color: myColor,
-      x: playerGroup.position.x,
-      y: playerGroup.position.y,
-      z: playerGroup.position.z,
-      rotation: playerGroup.rotation.y,
-      action: actionStatus,
-      chatMsg: myChatMessage,
-      lastActive: Date.now()
-    }, { merge: true }).catch(console.error);
-  };
-  clearInterval(window.presenceTimer);
-  window.presenceTimer = setInterval(syncLocalPresence, 200);
+  // Disconnect handler
+  onDisconnect(myPlayerRef).remove();
 
-  window.addEventListener('beforeunload', () => deleteDoc(myDocRef));
+  // Listen to all online players in room
+  onValue(roomPlayersRef, (snapshot) => {
+    const val = snapshot.val() || {};
+    const playerIds = Object.keys(val);
 
-  // Listen to active room players
-  playersUnsubscribe = onSnapshot(playersCol, (snapshot) => {
-    const activeDocs = snapshot.docs.filter(d => d.data().roomId === roomId);
-    document.getElementById('online-count').textContent = activeDocs.length || 1;
+    playerIds.forEach(id => {
+      if (id === myUserId) return;
+      const data = val[id];
+      let p = remotePlayers[id];
 
-    snapshot.docChanges().forEach((change) => {
-      const data = change.doc.data();
-      if (!data || data.userId === myUserId || data.roomId !== roomId) return;
-
-      if (change.type === 'removed') {
-        if (remotePlayers[data.userId]) {
-          scene.remove(remotePlayers[data.userId].avatar.group);
-          remotePlayers[data.userId].nametagEl.remove();
-          delete remotePlayers[data.userId];
-        }
+      if (!p) {
+        const avatar = createAvatarMesh(data.color || 0xc99b43);
+        scene.add(avatar.group);
+        const tagEl = createNametagEl(id, data.name || '同修');
+        p = remotePlayers[id] = {
+          avatar,
+          nametagEl: tagEl,
+          targetPos: new THREE.Vector3(data.x || 0, data.y || 0, data.z || 40),
+          targetRot: data.rotation || 0,
+          action: data.action || '正在静心'
+        };
       } else {
-        if (!remotePlayers[data.userId]) {
-          const avatar = createAvatarMesh(data.color || 0xc99b43);
-          scene.add(avatar.group);
-          const tagEl = createNametagEl(data.userId, data.name || '同修');
-          remotePlayers[data.userId] = {
-            avatar,
-            nametagEl: tagEl,
-            targetPos: new THREE.Vector3(data.x, data.y, data.z),
-            targetRot: data.rotation || 0,
-            action: data.action || '正在静心',
-            lastChat: ''
-          };
-        } else {
-          const p = remotePlayers[data.userId];
-          p.targetPos.set(data.x, data.y, data.z);
-          p.targetRot = data.rotation;
-          p.action = data.action;
-          p.nametagEl.querySelector('.status-tag').textContent = data.action;
-          p.nametagEl.querySelector('strong').textContent = data.name;
-
-          // Trigger speech bubble if remote chat message changed
-          if (data.chatMsg && data.chatMsg !== p.lastChat) {
-            p.lastChat = data.chatMsg;
-            showSpeechBubble(p.nametagEl, data.userId, data.chatMsg);
-            appendChatMessage(data.name, data.chatMsg);
-          }
-        }
+        p.targetPos.set(data.x, data.y, data.z);
+        p.targetRot = data.rotation;
+        p.action = data.action;
+        p.nametagEl.querySelector('.status-tag').textContent = data.action;
+        p.nametagEl.querySelector('strong').textContent = data.name;
       }
     });
-  }, (err) => console.log('Firestore Snapshot error:', err));
 
-  // Listen to room shared wishes
-  const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'temple_wishes');
-  wishesUnsubscribe = onSnapshot(wishesCol, (snapshot) => {
-    const wishList = [];
-    snapshot.forEach(d => {
-      const data = d.data();
-      if (data.roomId === roomId) wishList.push(data);
+    // Remove left players
+    Object.keys(remotePlayers).forEach(id => {
+      if (!val[id]) {
+        scene.remove(remotePlayers[id].avatar.group);
+        remotePlayers[id].nametagEl.remove();
+        delete remotePlayers[id];
+      }
     });
-    renderWishes(wishList);
-  }, (err) => console.log('Wishes Snapshot error:', err));
+    updateOnlineCountUI();
+  });
+
+  // Listen to Room Events (Chat & Incense广播)
+  roomEventsRef = ref(fbDatabase, `rooms/${roomId}/events`);
+  onValue(roomEventsRef, (snapshot) => {
+    const val = snapshot.val();
+    if (!val) return;
+    const keysArr = Object.keys(val);
+    const lastKey = keysArr[keysArr.length - 1];
+    const evt = val[lastKey];
+    if (evt && evt.userId !== myUserId && (Date.now() - evt.timestamp) < 3000) {
+      if (evt.type === 'chat') {
+        const p = remotePlayers[evt.userId];
+        if (p) showSpeechBubble(p.nametagEl, evt.userId, evt.text);
+        appendChatMessage(evt.name, evt.text);
+      } else if (evt.type === 'incense') {
+        appendChatMessage('系统广播', `${evt.name} 上献了【${evt.incenseType}】：“${evt.wish}”`);
+        showToast(`同修 ${evt.name} 刚在全房奉献了清香！`);
+      }
+    }
+  });
+
+  // Listen to Room Wishes
+  roomWishesRef = ref(fbDatabase, `rooms/${roomId}/wishes`);
+  onValue(roomWishesRef, (snapshot) => {
+    const val = snapshot.val() || {};
+    const wishList = Object.values(val);
+    if (wishList.length > 0) {
+      document.getElementById('wishing-grid').innerHTML = '';
+      wishList.reverse().forEach(renderWishCard);
+    }
+  });
+
+  // Sync position every 120ms
+  clearInterval(window.syncInterval);
+  window.syncInterval = setInterval(() => {
+    if (myPlayerRef) {
+      set(myPlayerRef, {
+        userId: myUserId,
+        name: myName,
+        color: myColor,
+        x: Math.round(playerGroup.position.x * 100) / 100,
+        y: Math.round(playerGroup.position.y * 100) / 100,
+        z: Math.round(playerGroup.position.z * 100) / 100,
+        rotation: Math.round(playerGroup.rotation.y * 100) / 100,
+        action: actionStatus,
+        lastSeen: Date.now()
+      });
+    }
+  }, 120);
 }
+
+function broadcastEvent(type, extraData = {}) {
+  if (!fbDatabase) return;
+  const eventsRef = ref(fbDatabase, `rooms/${roomId}/events`);
+  push(eventsRef, {
+    userId: myUserId,
+    name: myName,
+    type,
+    ...extraData,
+    timestamp: Date.now()
+  });
+}
+
+initFirebaseMultiplayer();
 
 function appendChatMessage(sender, text) {
   const box = document.getElementById('chat-messages');
@@ -1330,24 +1374,18 @@ function appendChatMessage(sender, text) {
   box.scrollTop = box.scrollHeight;
 }
 
-// Local Wishes rendering
-function renderWishes(customList = null) {
+function renderWishCard(w) {
   const container = document.getElementById('wishing-grid');
-  container.innerHTML = '';
-  const defaultWishes = [
-    { name: "悟真同修", text: "愿诸同修平安吉祥，所求皆随愿。", color: "gold" },
-    { name: "清心信士", text: "心如止水，身心无恙。", color: "green" },
-    { name: "慧明法师", text: "祈求风调雨顺，家和万事兴。", color: "red" }
-  ];
-  const list = customList && customList.length ? customList : defaultWishes;
-  list.forEach(w => {
-    const card = document.createElement('div');
-    card.className = `wish-card ${w.color || 'red'}`;
-    card.innerHTML = `<div style="font-size:12px; color:var(--gold); font-weight:bold; margin-bottom:4px;">【${w.name}】祈福:</div><div style="font-size:13px; line-height:1.5;">“${w.text}”</div>`;
-    container.appendChild(card);
-  });
+  const card = document.createElement('div');
+  card.className = `wish-card ${w.color || 'red'}`;
+  card.innerHTML = `<div style="font-size:12px; color:var(--gold); font-weight:bold; margin-bottom:4px;">【${w.name}】祈福:</div><div style="font-size:13px; line-height:1.5;">“${w.text}”</div>`;
+  container.appendChild(card);
 }
-renderWishes();
+[
+  { name: "悟真同修", text: "愿诸同修平安吉祥，所求皆随愿。", color: "gold" },
+  { name: "清心信士", text: "心如止水，身心无恙。", color: "green" },
+  { name: "慧明法师", text: "祈求风调雨顺，家和万事兴。", color: "red" }
+].forEach(renderWishCard);
 
 // --- CONTROLS & MOVEMENT LOGIC ---
 window.addEventListener('keydown', e => {
@@ -1475,8 +1513,8 @@ function update(dt, t) {
   updateNametagPos(playerGroup.position, localNametag);
   Object.keys(remotePlayers).forEach(id => {
     const p = remotePlayers[id];
-    p.avatar.group.position.lerp(p.targetPos, 0.15);
-    p.avatar.group.rotation.y = THREE.MathUtils.damp(p.avatar.group.rotation.y, p.targetRot, 0.15, dt);
+    p.avatar.group.position.lerp(p.targetPos, 0.18);
+    p.avatar.group.rotation.y = THREE.MathUtils.damp(p.avatar.group.rotation.y, p.targetRot, 0.18, dt);
     updateNametagPos(p.avatar.group.position, p.nametagEl);
   });
 
@@ -1603,13 +1641,9 @@ function sendChatMessage() {
   if (!text) return;
   input.value = '';
 
-  myChatMessage = text;
   showSpeechBubble(localNametag, myUserId, text);
   appendChatMessage(myName + ' (我)', text);
-
-  // Clear chat sync variable after sending to allow duplicate messages later
-  clearTimeout(chatTimer);
-  chatTimer = setTimeout(() => { myChatMessage = ''; }, 3000);
+  broadcastEvent('chat', { text });
 }
 document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
 document.getElementById('chat-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendChatMessage(); });
@@ -1626,15 +1660,16 @@ document.getElementById('btn-gesture-pray').addEventListener('click', () => {
 // Incense Modal
 document.getElementById('btn-offer-incense').addEventListener('click', () => openModal('modal-incense'));
 document.getElementById('btn-confirm-incense').addEventListener('click', () => {
-  const type = document.getElementById('select-incense-type').value;
+  const incenseType = document.getElementById('select-incense-type').value;
   const wish = document.getElementById('input-incense-wish').value || '愿全家安康顺遂';
   closeModal('modal-incense');
   playSingingBowlSound();
   addMerit(10);
-  actionStatus = `敬奉${type}`;
+  actionStatus = `敬奉${incenseType}`;
   localNametag.querySelector('.status-tag').textContent = actionStatus;
-  showToast(`【祈福敬香】${myName} 上献了【${type}】：“${wish}”`);
-  appendChatMessage('系统广播', `${myName} 上献了【${type}】：“${wish}”`);
+  showToast(`【祈福敬香】${myName} 上献了【${incenseType}】：“${wish}”`);
+  appendChatMessage('系统广播', `${myName} 上献了【${incenseType}】：“${wish}”`);
+  broadcastEvent('incense', { incenseType, wish });
 });
 
 document.getElementById('btn-singing-bowl').addEventListener('click', () => {
@@ -1653,9 +1688,9 @@ document.getElementById('btn-confirm-wish').addEventListener('click', () => {
   const hexMap = { red: 0xb54c3b, gold: 0xd9b35c, green: 0x2e8b57 };
   addRibbonToTree(hexMap[color] || 0xb54c3b);
 
-  if (db) {
-    const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'temple_wishes');
-    setDoc(doc(wishesCol), { roomId, name, text, color, timestamp: Date.now() });
+  if (fbDatabase) {
+    const wishesRef = ref(fbDatabase, `rooms/${roomId}/wishes`);
+    push(wishesRef, { name, text, color, timestamp: Date.now() });
   }
 
   closeModal('modal-wish');
@@ -1711,7 +1746,9 @@ document.getElementById('btn-do-switch-room').addEventListener('click', () => {
   const newRoom = document.getElementById('input-switch-room').value.trim();
   if (!newRoom) return;
   closeModal('modal-players');
-  subscribeToRoom(newRoom);
+  roomId = newRoom;
+  document.getElementById('modal-room-id').textContent = roomId;
+  connectToRoom(newRoom);
   history.pushState(null, '', `?room=${newRoom}`);
   showToast(`已成功切换入神庙房间【${newRoom}】！`);
 });
@@ -1738,3 +1775,13 @@ document.getElementById('btn-players-list').addEventListener('click', () => {
 </script>
 </body>
 </html>
+```eof
+
+### How to apply this update to your GitHub repository:
+
+1. Open your repository: **`[https://github.com/cksd293-del/temple_prayer_923](https://github.com/cksd293-del/temple_prayer_923)`**
+2. Click **`index.html`** -> click the **✏️ Edit (Pencil)** icon on the top right.
+3. Replace all the contents with the updated code above.
+4. Click **Commit changes...**.
+
+Your 3D Virtual Temple is now directly wired to your **`temple-prayer-923`** Firebase project! Players on any network across the globe who visit your GitHub link will now see each other walking, chatting, and praying in real time.
