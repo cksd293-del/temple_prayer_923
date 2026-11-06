@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>虚拟神庙 · 多人在线祈福庭院 | Multi-User Virtual Temple</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+  :root {
+    --gold: #e8c77b;
+    --gold-bright: #ffd97d;
+    --vermilion: #b64b32;
+    --dark-bg: #120e0b;
+    --panel-bg: rgba(24, 18, 14, 0.88);
+    --panel-border: rgba(232, 199, 123, 0.35);
+    --text-main: #f5ece0;
+    --text-muted: #c9bcae;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--dark-bg);
+    color: var(--text-main);
+    font-family: 'Noto Serif SC', STKaiti, KaiTi, Georgia, serif;
+    touch-action: none;
+  }
+
+  #game-container {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Glassmorphism UI */
+  .glass-panel {
+    background: var(--panel-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 12px rgba(232, 199, 123, 0.06);
+    border-radius: 14px;
+  }
+
+  .gold-button {
+    background: linear-gradient(135deg, #8f3420 0%, #b64b32 50%, #8f3420 100%);
+    border: 1px solid var(--gold);
+    color: var(--gold-bright);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .gold-button:hover {
+    background: linear-gradient(135deg, #a63f28 0%, #cf573c 50%, #a63f28 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(232, 199, 123, 0.3);
+  }
+
+  .gold-button:active {
+    transform: translateY(1px);
+  }
+
+  /* Header & Top Bar */
+  header {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none;
+  }
+
+  .brand-badge {
+    pointer-events: auto;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-actions {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .badge-btn {
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-main);
+  }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--gold);
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  /* Room Player List & Online Badge */
+  .player-count-badge {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #4ade80;
+  }
+
+  /* Navigation Tabs */
+  nav {
+    position: fixed;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .nav-tab {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+  }
+
+  .nav-tab.active, .nav-tab:hover {
+    color: var(--gold-bright);
+    background: rgba(232, 199, 123, 0.18);
+  }
+
+  /* 3D Nametags & Speech Bubbles */
+  #nametags-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 15;
+    overflow: hidden;
+  }
+
+  .player-nametag {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    background: rgba(20, 14, 10, 0.88);
+    border: 1px solid rgba(232, 199, 123, 0.45);
+    border-radius: 12px;
+    padding: 3px 9px;
+    font-size: 11px;
+    color: #fff;
+    white-space: nowrap;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
+
+  .player-nametag .status-tag {
+    display: block;
+    font-size: 9px;
+    color: var(--gold);
+  }
+
+  .speech-bubble {
+    position: absolute;
+    bottom: 105%;
+    left: 50%;
+    transform: translate(-50%, -6px);
+    background: #fdf6e7;
+    color: #2b180a;
+    border: 1px solid #d9b35c;
+    border-radius: 10px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+  }
+
+  .speech-bubble.show {
+    opacity: 1;
+    transform: translate(-50%, -12px);
+  }
+
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #fdf6e7 transparent transparent transparent;
+  }
+
+  /* Chat Box Widget Overlay */
+  #chat-widget {
+    position: fixed;
+    left: 14px;
+    bottom: 80px;
+    width: 280px;
+    max-height: 180px;
+    z-index: 22;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    padding: 8px 12px;
+  }
+
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 6px;
+    max-height: 110px;
+    font-size: 11px;
+  }
+
+  .chat-msg {
+    line-height: 1.4;
+    word-break: break-all;
+  }
+  .chat-msg strong { color: var(--gold); }
+
+  #chat-input-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  #chat-input {
+    flex: 1;
+    padding: 6px 10px;
+    background: rgba(10, 8, 6, 0.85);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 11px;
+    margin: 0;
+  }
+
+  #chat-send-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  /* Toast & Hints */
+  #hint {
+    position: fixed;
+    left: 50%;
+    bottom: max(12%, 85px);
+    transform: translateX(-50%);
+    background: rgba(28, 20, 14, 0.92);
+    border: 1px solid var(--gold);
+    color: #fff1d1;
+    border-radius: 25px;
+    padding: 10px 22px;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 25;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  }
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    top: 15%;
+    transform: translate(-50%, -10px);
+    background: rgba(25, 18, 13, 0.94);
+    border: 1px solid var(--gold);
+    color: var(--gold-bright);
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 30;
+    pointer-events: none;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  /* View Panes */
+  .view-pane {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: none;
+    pointer-events: none;
+  }
+
+  .view-pane.active { display: flex; }
+
+  /* Wooden Fish View */
+  #view-woodenfish {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+  }
+
+  .wooden-fish-btn {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.1s;
+  }
+
+  .wooden-fish-btn:active { transform: scale(0.92) rotate(-3deg); }
+
+  /* Fortune Slip View */
+  #view-fortune {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+  }
+
+  .tube-wrapper {
+    width: 130px;
+    height: 200px;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+
+  .tube-box {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #8f3420 0%, #592113 70%, #2d1109 100%);
+    border-radius: 8px 8px 26px 26px;
+    border: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  }
+
+  .shaking { animation: shake 0.5s ease-in-out infinite; }
+
+  @keyframes shake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg) translateY(-4px); }
+    50% { transform: rotate(10deg) translateY(4px); }
+    75% { transform: rotate(-8deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  /* Wishing Wall View */
+  #view-wishing {
+    pointer-events: auto;
+    padding: 110px 20px 90px 20px;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+  }
+
+  .wishing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+    width: 100%;
+    max-width: 920px;
+  }
+
+  .wish-card {
+    padding: 14px;
+    border-radius: 12px;
+    border-left: 4px solid var(--vermilion);
+    background: rgba(30, 22, 16, 0.92);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  }
+
+  .wish-card.gold { border-left-color: var(--gold); }
+  .wish-card.green { border-left-color: #2e8b57; }
+
+  /* Mobile Controls Touch UI */
+  #touch-ui {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 18;
+    pointer-events: none;
+  }
+
+  #stick-base {
+    position: absolute;
+    left: 20px;
+    bottom: 25px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(20, 15, 12, 0.35);
+    pointer-events: auto;
+  }
+
+  #stick {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    left: 35px;
+    top: 35px;
+    border-radius: 50%;
+    background: rgba(232,199,123,0.8);
+    border: 2px solid rgba(255,255,255,0.8);
+  }
+
+  #look-area {
+    position: absolute;
+    right: 0;
+    top: 15%;
+    width: 55%;
+    height: 65%;
+    pointer-events: auto;
+  }
+
+  .touch-btn {
+    position: absolute;
+    right: 20px;
+    bottom: 30px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 1px solid var(--gold);
+    background: rgba(143, 52, 32, 0.85);
+    color: #fff4d9;
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  }
+
+  #run-btn {
+    right: 95px;
+    bottom: 40px;
+    width: 50px;
+    height: 50px;
+    background: rgba(35, 26, 20, 0.8);
+    font-size: 11px;
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  @media (max-width:768px) {
+    #touch-ui { display: block; }
+    #chat-widget { width: 220px; bottom: 160px; font-size: 10px; }
+  }
+
+  /* Modals */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0,0,0,0.78);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal-box {
+    width: 100%;
+    max-width: 440px;
+    padding: 22px;
+    position: relative;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 9px 12px;
+    background: rgba(16, 11, 8, 0.9);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    margin-top: 6px;
+    margin-bottom: 12px;
+  }
+
+  /* Scroll Paper for Fortune */
+  .scroll-paper {
+    background: #f4ebd9;
+    color: #2b1a0e;
+    border: 4px solid var(--vermilion);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  }
+
+  /* Footer Controls Bar */
+  footer {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+    pointer-events: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .action-btn {
+    padding: 9px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  /* Floating 3D Merit Text */
+  .merit-float {
+    position: fixed;
+    pointer-events: none;
+    color: var(--gold-bright);
+    font-weight: bold;
+    font-size: 18px;
+    text-shadow: 0 0 10px rgba(232, 199, 123, 0.8), 0 0 20px #000;
+    z-index: 100;
+    animation: floatUp 1.2s ease-out forwards;
+  }
+
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-55px) scale(1.15); }
+  }
+
+  #loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #17110d;
+    z-index: 100;
+    text-align: center;
+    padding: 20px;
+    transition: opacity 0.5s;
+  }
+
+  .loading-bar {
+    width: 220px;
+    height: 4px;
+    background: #382c23;
+    border-radius: 4px;
+    margin-top: 16px;
+    overflow: hidden;
+  }
+
+  .loading-fill {
+    width: 0%;
+    height: 100%;
+    background: var(--gold);
+    animation: loadAnim 1.2s forwards;
+  }
+
+  @keyframes loadAnim { to { width: 100%; } }
+</style>
+
+<!-- Standard Three.js library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading">
+  <h2 style="color: var(--gold); letter-spacing: 4px; font-weight: 600;">虚拟神庙 · 多人联机庭院</h2>
+  <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">正在连接实时数据库与 3D 庭院...</p>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+</div>
+
+<!-- 3D Canvas Container -->
+<div id="game-container"></div>
+
+<!-- Floating HTML Nametags & Speech Bubbles -->
+<div id="nametags-container"></div>
+
+<!-- Live Chat Drawer Widget -->
+<div class="glass-panel" id="chat-widget">
+  <div id="chat-messages">
+    <div class="chat-msg" style="color: var(--gold);"><strong>系统:</strong> 欢迎入神庙祈福，可在此与全房同修佛音问候。</div>
+  </div>
+  <div id="chat-input-row">
+    <input type="text" id="chat-input" placeholder="输入合十问候语..." maxlength="35">
+    <button class="gold-button" id="chat-send-btn">发送</button>
+  </div>
+</div>
+
+<!-- Top Header Bar -->
+<header>
+  <div class="glass-panel brand-badge">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e8c77b" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <div>
+      <h1 style="font-size: 14px; color: var(--gold); leading-height: 1;">虚拟神庙</h1>
+      <p style="font-size: 9px; color: var(--text-muted);">多人实时同框 · 共享福田</p>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <!-- Profile Customization -->
+    <button class="glass-panel badge-btn" id="btn-edit-profile" title="修改法号与形象">
+      <span style="color: var(--gold);">⚙️</span>
+      <span id="label-my-name">法号设置</span>
+    </button>
+
+    <!-- Online Player Count & Room Info -->
+    <div class="glass-panel badge-btn" id="btn-players-list" title="查看同修列表与切换房间">
+      <span class="player-count-badge"></span>
+      <span>同修: <strong id="online-count" style="color: var(--gold-bright);">1</strong> 人</span>
+    </div>
+
+    <!-- Room Merit Pool -->
+    <div class="glass-panel badge-btn" id="btn-merit-counter" title="功德池">
+      <span style="color: var(--text-muted);">功德:</span>
+      <strong id="merit-num" style="color: var(--gold-bright);">108</strong>
+    </div>
+
+    <!-- Room Share Link -->
+    <button class="glass-panel icon-btn" id="btn-share-room" title="复制链接邀请好友入同神庙">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+    </button>
+
+    <!-- Sound Toggle -->
+    <button class="glass-panel icon-btn" id="btn-audio" title="开启/关闭禅音">
+      <svg id="icon-sound-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
+      <svg id="icon-sound-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Navigation Tabs -->
+<nav class="glass-panel">
+  <button class="nav-tab active" data-tab="courtyard">3D 庭院</button>
+  <button class="nav-tab" data-tab="woodenfish">电子木鱼</button>
+  <button class="nav-tab" data-tab="fortune">灵签求福</button>
+  <button class="nav-tab" data-tab="wishing">许愿墙</button>
+</nav>
+
+<!-- Views -->
+<div class="view-pane active" id="view-courtyard"></div>
+
+<div class="view-pane" id="view-woodenfish">
+  <div class="wooden-fish-btn" id="wooden-fish-widget">
+    <svg width="180" height="160" viewBox="0 0 100 90">
+      <path d="M50 10 C 25 10, 5 30, 5 55 C 5 75, 25 85, 50 85 C 75 85, 95 75, 95 55 C 95 30, 75 10, 50 10 Z" fill="#6e3b1f" stroke="#e8c77b" stroke-width="2.5"/>
+      <circle cx="35" cy="45" r="7" fill="#2d160a" stroke="#e8c77b" stroke-width="1.5"/>
+      <path d="M 50 25 Q 70 30, 80 50" fill="none" stroke="#e8c77b" stroke-width="2" stroke-dasharray="3,3"/>
+      <path d="M 20 65 Q 50 78, 80 65" fill="none" stroke="#2d160a" stroke-width="3"/>
+    </svg>
+    <p style="margin-top: 14px; color: var(--gold); font-size: 14px; letter-spacing: 2px;">敲击木鱼 · 积聚功德</p>
+  </div>
+</div>
+
+<div class="view-pane" id="view-fortune">
+  <div class="tube-wrapper" id="fortune-tube">
+    <div class="tube-box" id="tube-element">
+      <span style="writing-mode: vertical-rl; color: var(--gold); font-size: 18px; letter-spacing: 4px; font-weight: 700;">灵签筒</span>
+    </div>
+  </div>
+  <button class="gold-button action-btn" id="btn-shake-fortune">摇动签筒 · 求取灵签</button>
+</div>
+
+<div class="view-pane" id="view-wishing">
+  <div style="margin-bottom: 16px;">
+    <button class="gold-button action-btn" id="btn-open-wish-modal">+ 撰写祈福许愿带</button>
+  </div>
+  <div class="wishing-grid" id="wishing-grid"></div>
+</div>
+
+<!-- Touch UI -->
+<div id="touch-ui">
+  <div id="stick-base"><div id="stick"></div></div>
+  <div id="look-area"></div>
+  <button class="touch-btn" id="touch-interact-btn">互动</button>
+  <button class="touch-btn" id="run-btn">跑步</button>
+</div>
+
+<!-- Hints & Toasts -->
+<div id="hint"></div>
+<div id="toast"></div>
+
+<!-- Footer Controls -->
+<footer>
+  <button class="gold-button action-btn" id="btn-offer-incense">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    诚心敬香
+  </button>
+  <button class="glass-panel action-btn" id="btn-gesture-pray" style="color: var(--gold-bright);">
+    <span>🙏</span> 合十问候
+  </button>
+  <button class="glass-panel action-btn" id="btn-singing-bowl" style="color: var(--gold);">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    鸣磬静心
+  </button>
+</footer>
+
+<!-- MODAL: PROFILE EDIT -->
+<div class="modal-overlay" id="modal-profile">
+  <div class="glass-panel modal-box">
+    <button class="close-btn" data-close="modal-profile">&times;</button>
+    <h2 style="color: var(--gold); font-size: 18px; text-align: center; margin-bottom: 10px;">设置同修法号与僧袍</h2>
+    
+    <label style="font-size: 11px; color: var(--gold);">您的法号/昵称:</label>
+    <input type="text" id="input-profile-name" placeholder="例: 悟真同修" maxlength="12">
+
+    <label style="font-size: 11px; color: var(--gold);">选择僧袍颜色:</label>
+    <select id="select-profile-color">
+      <option value="0x8b4733">赭红僧袍 (传统端庄)</option>
+      <option value="0xc99b43">金辉袈裟 (庄严佛光)</option>
+      <option value="0x344c57">深蓝道袍 (沉静清修)</option>
+      <option value="0x4a6b53">松柏翠绿 (生机平安)</option>
+      <option value="0x6e4a75">紫气东来 (吉祥福瑞)</option>
+    </select>
+
+    <button class="gold-button action-btn" id="btn-save-profile" style="width: 100%; justify-content: center; margin-top: 8px;">
+      保存身份设置
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: INCENSE -->
+<div class="modal-overlay" id="modal-incense">
+  <div class="glass-panel modal-box">
+    <button class="close-btn" data-close="modal-incense">&times;</button>
+    <h2 style="color: var(--gold); font-size: 18px; text-align: center; margin-bottom: 4px;">诚心奉上 · 三柱清香</h2>
+    <p style="color: var(--text-muted); font-size: 11px; text-align: center; margin-bottom: 14px;">在全房同修面前燃香祈福</p>
+
+    <label style="font-size: 11px; color: var(--gold);">选择香种:</label>
+    <select id="select-incense-type">
+      <option value="平安康泰香">平安康泰香 (保佑无病无灾)</option>
+      <option value="财运亨通香">财运亨通香 (保佑广结财源)</option>
+      <option value="功名学业香">功名学业香 (保佑智慧开朗)</option>
+      <option value="喜结良缘香">喜结良缘香 (保佑家和业兴)</option>
+    </select>
+
+    <label style="font-size: 11px; color: var(--gold);">祈愿誓词:</label>
+    <input type="text" id="input-incense-wish" placeholder="愿全家平安，所求皆顺意..." maxlength="30">
+
+    <button class="gold-button action-btn" id="btn-confirm-incense" style="width: 100%; justify-content: center;">
+      点燃清香 · 广布祈福
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: WISH -->
+<div class="modal-overlay" id="modal-wish">
+  <div class="glass-panel modal-box">
+    <button class="close-btn" data-close="modal-wish">&times;</button>
+    <h2 style="color: var(--gold); font-size: 18px; text-align: center; margin-bottom: 12px;">系挂许愿带</h2>
+
+    <label style="font-size: 11px; color: var(--gold);">祈福者署名:</label>
+    <input type="text" id="wish-name" placeholder="信士 / 匿名" maxlength="10">
+
+    <label style="font-size: 11px; color: var(--gold);">许愿内容:</label>
+    <textarea id="wish-text" rows="3" placeholder="愿所求皆所愿，所行化坦途..." maxlength="60"></textarea>
+
+    <label style="font-size: 11px; color: var(--gold);">丝带颜色:</label>
+    <select id="wish-color">
+      <option value="red">朱红 (吉祥喜庆)</option>
+      <option value="gold">金辉 (功名财运)</option>
+      <option value="green">翡翠 (健康平安)</option>
+    </select>
+
+    <button class="gold-button action-btn" id="btn-confirm-wish" style="width: 100%; justify-content: center;">
+      挂在许愿树上 (+5功德)
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: FORTUNE RESULT -->
+<div class="modal-overlay" id="modal-fortune-result">
+  <div class="modal-box" style="max-width: 380px; padding: 0;">
+    <button class="close-btn" data-close="modal-fortune-result" style="z-index: 10; color: #592113;">&times;</button>
+    <div class="scroll-paper">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b64b32; padding-bottom: 6px; margin-bottom: 10px;">
+        <span id="fortune-rank" style="background: #b64b32; color: #ffd97d; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px;">大吉</span>
+        <h3 id="fortune-title" style="color: #8f3420; font-size: 16px; font-weight: 700;">第一签 · 莫向外求</h3>
+      </div>
+      <div style="background: rgba(182,75,50,0.08); padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 10px;">
+        <p id="fortune-poem" style="color: #592113; font-weight: 600; line-height: 1.7; font-size: 14px;"></p>
+      </div>
+      <div style="font-size: 12px; color: #3d2212; line-height: 1.5; margin-bottom: 10px;">
+        <strong>【解签】:</strong> <span id="fortune-desc"></span>
+      </div>
+      <div style="font-size: 11px; color: #7d4427; border-top: 1px dashed #b64b32; padding-top: 6px; display: flex; justify-content: space-between;">
+        <span><strong>宜:</strong> <span id="fortune-yi"></span></span>
+        <span><strong>忌:</strong> <span id="fortune-ji"></span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PLAYERS & ROOM SWITCHER -->
+<div class="modal-overlay" id="modal-players">
+  <div class="glass-panel modal-box">
+    <button class="close-btn" data-close="modal-players">&times;</button>
+    <h2 style="color: var(--gold); font-size: 18px; text-align: center; margin-bottom: 4px;">神庙大殿同修大厅</h2>
+    <p style="color: var(--text-muted); font-size: 11px; text-align: center; margin-bottom: 12px;">当前神庙房间: <strong id="modal-room-id" style="color: var(--gold-bright);">zen-room-1</strong></p>
+
+    <!-- Switch Room Form -->
+    <div style="background: rgba(15,10,7,0.7); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
+      <label style="font-size: 11px; color: var(--gold);">加入/创建其他神庙房间:</label>
+      <div style="display: flex; gap: 6px; margin-top: 4px;">
+        <input type="text" id="input-switch-room" placeholder="输入房间代号 (如: temple-888)" style="margin: 0; font-size: 12px;">
+        <button class="gold-button" id="btn-do-switch-room" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">切换房间</button>
+      </div>
+    </div>
+
+    <label style="font-size: 11px; color: var(--gold); margin-bottom: 6px; display: block;">当前房间在线同修列表:</label>
+    <div id="players-list-content" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+  </div>
+</div>
+
+<!-- Real-time Firebase & Application Logic -->
+<script type="module">
+import * as THREE_MODULE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+const THREE = window.THREE || THREE_MODULE;
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// --- GLOBAL UTILS & AUDIO ---
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playWoodenFishSound() {
+  initAudio();
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(600, now);
+  osc.frequency.exponentialRampToValueAtTime(130, now + 0.08);
+  gain.gain.setValueAtTime(0.8, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.1);
+}
+
+function playSingingBowlSound() {
+  initAudio();
+  const now = audioCtx.currentTime;
+  [216, 432, 864].forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    const dur = 5.5 - idx * 1.1;
+    gain.gain.setValueAtTime(0.3 / (idx + 1), now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + dur + 0.1);
+  });
+}
+
+// --- 3D SCENE SETUP (THREE.JS) ---
+const container = document.getElementById('game-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xb2c5c1);
+scene.fog = new THREE.Fog(0xb2c5c1, 45, 120);
+
+const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 200);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+if (THREE.SRGBColorSpace) {
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+} else if (THREE.sRGBEncoding) {
+  renderer.outputEncoding = THREE.sRGBEncoding;
+}
+container.appendChild(renderer.domElement);
+
+// Lighting
+scene.add(new THREE.HemisphereLight(0xeaf0ff, 0x6e5b47, 1.7));
+const sun = new THREE.DirectionalLight(0xffe2b3, 2.3);
+sun.position.set(-25, 40, 25);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -50; sun.shadow.camera.right = 50;
+sun.shadow.camera.top = 50; sun.shadow.camera.bottom = -50;
+scene.add(sun);
+
+// Materials
+const mat = (color, roughness = 0.8, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
+const stoneMat = mat(0x8e887c), stoneDarkMat = mat(0x56554e), wallMat = mat(0xb64b32);
+const darkWoodMat = mat(0x4a2518), woodMat = mat(0x723e28), goldMat = mat(0xc99b43, 0.45, 0.55);
+const roofMat = mat(0x283f3c, 0.7), roofGoldMat = mat(0x9d793d, 0.6), leafMat = mat(0x386043), leaf2Mat = mat(0x527546);
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x4aa3a2, roughness: 0.2, metalness: 0.15, transparent: true, opacity: 0.85 });
+
+// Geometry Helpers
+const box = (x, y, z, sx, sy, sz, material, parent = scene) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material);
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  parent.add(m); return m;
+};
+const cylinder = (x, y, z, rt, rb, h, material, parent = scene, seg = 12) => {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), material);
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  parent.add(m); return m;
+};
+const sphere = (x, y, z, r, material, parent = scene) => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), material);
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  parent.add(m); return m;
+};
+
+// Ground & Courtyard Tiles
+box(0, -0.35, 0, 110, 0.7, 98, mat(0x817c70));
+for (let x = -44; x <= 44; x += 4) {
+  for (let z = -40; z <= 40; z += 4) {
+    const tile = box(x, 0.015, z, 3.88, 0.045, 3.88, mat(((x + z) % 8 === 0) ? 0xa89f8d : 0x938b7b));
+    tile.receiveShadow = true;
+  }
+}
+const pathMat = mat(0xb5a892);
+box(0, 0.06, 0, 9, 0.08, 80, pathMat);
+box(0, 0.07, -15, 42, 0.08, 9, pathMat);
+
+// Perimeter Walls
+for (let x = -50; x <= 50; x += 6) { box(x, 2, -45, 5.8, 4, 0.8, wallMat); box(x, 2, 45, 5.8, 4, 0.8, wallMat); }
+for (let z = -40; z <= 40; z += 6) { box(-51, 2, z, 0.8, 4, 5.8, wallMat); box(51, 2, z, 0.8, 4, 5.8, wallMat); }
+
+// Temple Architecture
+function roof(x, y, z, w, d) {
+  box(x, y, z, w, 0.48, d, roofMat);
+  box(x, y + 0.42, z, w * 0.83, 0.42, d * 0.83, roofMat);
+  box(x, y + 0.78, z, w * 0.58, 0.28, d * 0.58, roofGoldMat);
+}
+
+function temple(x, z, w, d) {
+  const g = new THREE.Group(); scene.add(g); g.position.set(x, 0, z);
+  box(0, 0.45, 0, w, 0.9, d, stoneMat, g);
+  box(0, 1.05, 0, w * 0.94, 0.22, d * 0.94, darkWoodMat, g);
+  for (let px of [-w * 0.38, 0, w * 0.38]) {
+    for (let pz of [-d * 0.36, d * 0.36]) {
+      cylinder(px, 2.55, pz, 0.24, 0.28, 2.9, wallMat, g);
+      cylinder(px, 1.15, pz, 0.37, 0.37, 0.18, goldMat, g);
+    }
+  }
+  box(0, 2.15, 0, w * 0.88, 1.7, d * 0.82, wallMat, g);
+  box(0, 1.95, d * 0.416, w * 0.3, 1.35, 0.12, darkWoodMat, g);
+  roof(x, 3.75, z, w * 1.22, d * 1.28);
+}
+temple(0, -30, 26, 16);
+temple(-30, -14, 13, 10);
+temple(30, -14, 13, 10);
+
+// Main Statue Silhouette
+cylinder(0, 2.0, -30, 0.8, 0.8, 1.1, goldMat);
+sphere(0, 3.0, -30, 0.72, goldMat);
+sphere(0, 4.05, -30, 0.44, goldMat);
+
+// Entrance Gate
+for (let x of [-9, 0, 9]) {
+  cylinder(x, 2.6, 36, 0.48, 0.58, 5.2, wallMat);
+  cylinder(x, 5.25, 36, 0.72, 0.72, 0.25, goldMat);
+}
+box(0, 4.6, 36, 21, 0.55, 2.2, darkWoodMat);
+box(0, 5.15, 36, 23, 0.35, 2.8, roofMat);
+
+// Incense Burner
+const incenseGroup = new THREE.Group(); incenseGroup.position.set(0, 0, -15); scene.add(incenseGroup);
+cylinder(0, 0.55, 0, 1.15, 1.0, 0.8, goldMat, incenseGroup, 16);
+cylinder(0, 1.05, 0, 0.78, 0.95, 0.35, woodMat, incenseGroup, 16);
+cylinder(0, 1.35, 0, 0.95, 0.8, 0.22, goldMat, incenseGroup, 16);
+for (let i = 0; i < 5; i++) {
+  cylinder(-0.38 + i * 0.19, 1.95, 0, 0.025, 0.025, 1.05, darkWoodMat, incenseGroup, 6);
+  sphere(-0.38 + i * 0.19, 2.49, 0, 0.055, mat(0xff8a38), incenseGroup);
+}
+
+// Incense Smoke Particle System
+const smokeMat = new THREE.MeshBasicMaterial({ color: 0xe8e4d8, transparent: true, opacity: 0.2, depthWrite: false });
+const smokeList = [];
+for (let i = 0; i < 14; i++) {
+  const p = new THREE.Mesh(new THREE.SphereGeometry(0.18 + Math.random() * 0.14, 8, 8), smokeMat);
+  p.position.set((Math.random() - 0.5) * 0.5, 2.7 + i * 0.25, (Math.random() - 0.5) * 0.2);
+  incenseGroup.add(p);
+  smokeList.push({ mesh: p, phase: Math.random() * 6.28 });
+}
+
+// Wishing Tree with Hanging Ribbons
+function buildTree(x, z, scale = 1) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+  cylinder(0, 1.5, 0, 0.32 * scale, 0.48 * scale, 3 * scale, woodMat, g);
+  for (let i = 0; i < 5; i++) {
+    const y = (2.0 + i * 0.55) * scale;
+    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry((1.35 - i * 0.13) * scale, 1), i % 2 ? leafMat : leaf2Mat);
+    crown.position.set((Math.random() - 0.5) * 0.4, y, (Math.random() - 0.5) * 0.4);
+    crown.scale.y = 0.8; crown.castShadow = true;
+    g.add(crown);
+  }
+  return g;
+}
+const wishTreeGroup = buildTree(-20, 28, 1.35);
+
+const ribbons = [];
+function addRibbonToTree(colorHex) {
+  const a = Math.random() * Math.PI * 2;
+  const ribbon = box(-20 + Math.cos(a) * 1.5, 3.2, 28 + Math.sin(a) * 1.5, 0.12, 1.2, 0.04, mat(colorHex));
+  ribbon.rotation.z = (Math.random() - 0.5) * 0.35;
+  ribbons.push(ribbon);
+}
+for (let i = 0; i < 10; i++) addRibbonToTree(i % 2 ? 0xd9b35c : 0xb54c3b);
+
+// Lotus Pond & Bridge
+cylinder(20, 0.15, 28, 7.2, 7.2, 0.35, stoneDarkMat, scene, 30).scale.z = 0.8;
+const water = cylinder(20, 0.38, 28, 6.7, 6.7, 0.12, waterMat, scene, 30); water.scale.z = 0.8;
+for (let i = 0; i < 8; i++) {
+  const a = i * 2.4;
+  const px = 20 + Math.cos(a) * 3, pz = 28 + Math.sin(a) * 2.4;
+  const pad = new THREE.Mesh(new THREE.CircleGeometry(0.55, 12), leafMat);
+  pad.position.set(px, 0.49, pz); pad.rotation.x = -Math.PI / 2; scene.add(pad);
+  sphere(px, 0.55, pz, 0.15, mat(0xd7a5a0));
+}
+box(20, 0.75, 20, 3, 0.5, 8, stoneMat).rotation.x = 0.04;
+
+// Lanterns
+function lantern(x, z) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+  cylinder(0, 3.2, 0, 0.06, 0.06, 2.2, darkWoodMat, g);
+  cylinder(0, 2.05, 0, 0.5, 0.42, 0.7, wallMat, g);
+  const l = new THREE.PointLight(0xffb45d, 0.65, 7); l.position.set(0, 2, 0); g.add(l);
+}
+[-12, 12].forEach(x => [-4, 10, 24].forEach(z => lantern(x, z)));
+
+// --- PLAYER AVATAR & MULTIPLAYER ENGINE ---
+const ROBE_COLORS = [0x8b4733, 0xc99b43, 0x344c57, 0x4a6b53, 0x6e4a75, 0xa3523b];
+
+function createAvatarMesh(colorHex = 0x8b4733) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.44, 0.9, 12), mat(0x283238));
+  body.position.y = 1.05; body.castShadow = true; group.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 12), mat(0xd9b38c));
+  head.position.y = 1.95; head.castShadow = true; group.add(head);
+  const robeMaterial = mat(colorHex);
+  const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.55, 0.75, 12), robeMaterial);
+  robe.position.y = 0.85; robe.castShadow = true; group.add(robe);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.48, 0.56, 24), new THREE.MeshBasicMaterial({ color: 0xe8c77b, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.035; group.add(ring);
+  return { group, head, robe, robeMaterial };
+}
+
+// Local Player State
+const myUserId = 'usr_' + Math.random().toString(36).substring(2, 9);
+let myName = localStorage.getItem('temple_my_name') || ('同修' + myUserId.slice(-4));
+let myColor = parseInt(localStorage.getItem('temple_my_color') || ROBE_COLORS[0]);
+
+document.getElementById('label-my-name').textContent = myName;
+
+const playerGroup = new THREE.Group(); scene.add(playerGroup); playerGroup.position.set(0, 0, 40);
+let localAvatar = createAvatarMesh(myColor);
+playerGroup.add(localAvatar.group);
+
+let yaw = 0, pitch = 0.22, running = false, actionStatus = '正在静心';
+let myChatMessage = '';
+let chatTimer = null;
+const keys = {};
+let stickX = 0, stickY = 0, lookPointer = null, lastLookX = 0, lastLookY = 0;
+
+// Remote Players Store
+const remotePlayers = {}; // userId -> { avatar, nametagEl, speechBubbleEl, targetPos, targetRot, action }
+
+// Nametag & Speech Bubble UI Management
+const nametagsContainer = document.getElementById('nametags-container');
+function createNametagEl(id, name) {
+  const containerEl = document.createElement('div');
+  containerEl.className = 'player-nametag';
+  containerEl.id = `tag-${id}`;
+  containerEl.innerHTML = `
+    <div class="speech-bubble" id="bubble-${id}"></div>
+    <strong>${name}</strong>
+    <span class="status-tag">正在静心</span>
+  `;
+  nametagsContainer.appendChild(containerEl);
+  return containerEl;
+}
+const localNametag = createNametagEl(myUserId, myName + ' (我)');
+
+// Dynamic Projection to 2D Screen Coordinates
+const tempVec = new THREE.Vector3();
+function updateNametagPos(position, el) {
+  tempVec.copy(position); tempVec.y += 2.4;
+  tempVec.project(camera);
+  if (tempVec.z > 1) { el.style.opacity = '0'; return; }
+  const x = (tempVec.x * 0.5 + 0.5) * window.innerWidth;
+  const y = (-(tempVec.y * 0.5) + 0.5) * window.innerHeight;
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  el.style.opacity = '1';
+}
+
+function showSpeechBubble(tagEl, id, text) {
+  const bubble = tagEl.querySelector('.speech-bubble');
+  if (!bubble) return;
+  bubble.textContent = text;
+  bubble.classList.add('show');
+  clearTimeout(bubble.timer);
+  bubble.timer = setTimeout(() => bubble.classList.remove('show'), 4500);
+}
+
+// --- FIREBASE REALTIME MULTIPLAYER ---
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'virtual-temple-multiplayer';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+// Parse Room ID from URL query ?room=xxx
+let roomId = new URLSearchParams(window.location.search).get('room') || 'zen-room-1';
+document.getElementById('modal-room-id').textContent = roomId;
+
+let db = null;
+let playersUnsubscribe = null;
+let wishesUnsubscribe = null;
+
+function clearRemotePlayers() {
+  Object.keys(remotePlayers).forEach(id => {
+    scene.remove(remotePlayers[id].avatar.group);
+    remotePlayers[id].nametagEl.remove();
+    delete remotePlayers[id];
+  });
+}
+
+if (firebaseConfig) {
+  try {
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    db = getFirestore(app);
+
+    const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    const authPromise = initialToken ? signInWithCustomToken(auth, initialToken) : signInAnonymously(auth);
+
+    authPromise.then((userCred) => {
+      if (!userCred.user) return;
+      subscribeToRoom(roomId);
+    }).catch(console.error);
+  } catch (err) {
+    console.warn('Firebase initialized in fallback mode:', err);
+  }
+}
+
+function subscribeToRoom(rId) {
+  if (!db) return;
+  if (playersUnsubscribe) playersUnsubscribe();
+  if (wishesUnsubscribe) wishesUnsubscribe();
+
+  roomId = rId;
+  document.getElementById('modal-room-id').textContent = roomId;
+  clearRemotePlayers();
+
+  // RULE 1 Strict Public Collection Path: /artifacts/{appId}/public/data/temple_players
+  const playersCol = collection(db, 'artifacts', appId, 'public', 'data', 'temple_players');
+  const myDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'temple_players', myUserId);
+
+  // Periodic heartbeat / position sync
+  const syncLocalPresence = () => {
+    setDoc(myDocRef, {
+      userId: myUserId,
+      name: myName,
+      roomId: roomId,
+      color: myColor,
+      x: playerGroup.position.x,
+      y: playerGroup.position.y,
+      z: playerGroup.position.z,
+      rotation: playerGroup.rotation.y,
+      action: actionStatus,
+      chatMsg: myChatMessage,
+      lastActive: Date.now()
+    }, { merge: true }).catch(console.error);
+  };
+  clearInterval(window.presenceTimer);
+  window.presenceTimer = setInterval(syncLocalPresence, 200);
+
+  window.addEventListener('beforeunload', () => deleteDoc(myDocRef));
+
+  // Listen to active room players
+  playersUnsubscribe = onSnapshot(playersCol, (snapshot) => {
+    const activeDocs = snapshot.docs.filter(d => d.data().roomId === roomId);
+    document.getElementById('online-count').textContent = activeDocs.length || 1;
+
+    snapshot.docChanges().forEach((change) => {
+      const data = change.doc.data();
+      if (!data || data.userId === myUserId || data.roomId !== roomId) return;
+
+      if (change.type === 'removed') {
+        if (remotePlayers[data.userId]) {
+          scene.remove(remotePlayers[data.userId].avatar.group);
+          remotePlayers[data.userId].nametagEl.remove();
+          delete remotePlayers[data.userId];
+        }
+      } else {
+        if (!remotePlayers[data.userId]) {
+          const avatar = createAvatarMesh(data.color || 0xc99b43);
+          scene.add(avatar.group);
+          const tagEl = createNametagEl(data.userId, data.name || '同修');
+          remotePlayers[data.userId] = {
+            avatar,
+            nametagEl: tagEl,
+            targetPos: new THREE.Vector3(data.x, data.y, data.z),
+            targetRot: data.rotation || 0,
+            action: data.action || '正在静心',
+            lastChat: ''
+          };
+        } else {
+          const p = remotePlayers[data.userId];
+          p.targetPos.set(data.x, data.y, data.z);
+          p.targetRot = data.rotation;
+          p.action = data.action;
+          p.nametagEl.querySelector('.status-tag').textContent = data.action;
+          p.nametagEl.querySelector('strong').textContent = data.name;
+
+          // Trigger speech bubble if remote chat message changed
+          if (data.chatMsg && data.chatMsg !== p.lastChat) {
+            p.lastChat = data.chatMsg;
+            showSpeechBubble(p.nametagEl, data.userId, data.chatMsg);
+            appendChatMessage(data.name, data.chatMsg);
+          }
+        }
+      }
+    });
+  }, (err) => console.log('Firestore Snapshot error:', err));
+
+  // Listen to room shared wishes
+  const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'temple_wishes');
+  wishesUnsubscribe = onSnapshot(wishesCol, (snapshot) => {
+    const wishList = [];
+    snapshot.forEach(d => {
+      const data = d.data();
+      if (data.roomId === roomId) wishList.push(data);
+    });
+    renderWishes(wishList);
+  }, (err) => console.log('Wishes Snapshot error:', err));
+}
+
+function appendChatMessage(sender, text) {
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg';
+  div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// Local Wishes rendering
+function renderWishes(customList = null) {
+  const container = document.getElementById('wishing-grid');
+  container.innerHTML = '';
+  const defaultWishes = [
+    { name: "悟真同修", text: "愿诸同修平安吉祥，所求皆随愿。", color: "gold" },
+    { name: "清心信士", text: "心如止水，身心无恙。", color: "green" },
+    { name: "慧明法师", text: "祈求风调雨顺，家和万事兴。", color: "red" }
+  ];
+  const list = customList && customList.length ? customList : defaultWishes;
+  list.forEach(w => {
+    const card = document.createElement('div');
+    card.className = `wish-card ${w.color || 'red'}`;
+    card.innerHTML = `<div style="font-size:12px; color:var(--gold); font-weight:bold; margin-bottom:4px;">【${w.name}】祈福:</div><div style="font-size:13px; line-height:1.5;">“${w.text}”</div>`;
+    container.appendChild(card);
+  });
+}
+renderWishes();
+
+// --- CONTROLS & MOVEMENT LOGIC ---
+window.addEventListener('keydown', e => {
+  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+  keys[e.code] = true;
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  if (e.code === 'KeyE') triggerProximityInteraction();
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') running = true;
+});
+window.addEventListener('keyup', e => {
+  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+  keys[e.code] = false;
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') running = false;
+});
+
+renderer.domElement.addEventListener('click', () => {
+  if (matchMedia('(pointer:fine)').matches && document.pointerLockElement !== renderer.domElement) {
+    renderer.domElement.requestPointerLock?.();
+  }
+});
+document.addEventListener('mousemove', e => {
+  if (document.pointerLockElement === renderer.domElement) {
+    yaw -= e.movementX * 0.0024;
+    pitch = Math.max(-0.15, Math.min(0.75, pitch + e.movementY * 0.0018));
+  }
+});
+
+// Mobile Touch Controls
+const stickBase = document.getElementById('stick-base'), stick = document.getElementById('stick');
+let stickId = null;
+function updateStick(e) {
+  const r = stickBase.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let dx = e.clientX - cx, dy = e.clientY - cy, len = Math.hypot(dx, dy), max = 40;
+  if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+  stick.style.transform = `translate(${dx}px, ${dy}px)`;
+  stickX = dx / max; stickY = dy / max;
+}
+stickBase.addEventListener('pointerdown', e => { stickId = e.pointerId; stickBase.setPointerCapture(stickId); updateStick(e); });
+stickBase.addEventListener('pointermove', e => { if (e.pointerId === stickId) updateStick(e); });
+function resetStick(e) { if (e.pointerId === stickId) { stickId = null; stickX = 0; stickY = 0; stick.style.transform = 'translate(0,0)'; } }
+stickBase.addEventListener('pointerup', resetStick); stickBase.addEventListener('pointercancel', resetStick);
+
+const lookArea = document.getElementById('look-area');
+lookArea.addEventListener('pointerdown', e => { lookPointer = e.pointerId; lastLookX = e.clientX; lastLookY = e.clientY; lookArea.setPointerCapture(e.pointerId); });
+lookArea.addEventListener('pointermove', e => {
+  if (e.pointerId === lookPointer) {
+    yaw -= (e.clientX - lastLookX) * 0.008;
+    pitch = Math.max(-0.15, Math.min(0.75, pitch + (e.clientY - lastLookY) * 0.005));
+    lastLookX = e.clientX; lastLookY = e.clientY;
+  }
+});
+lookArea.addEventListener('pointerup', e => { if (e.pointerId === lookPointer) lookPointer = null; });
+lookArea.addEventListener('pointercancel', e => { if (e.pointerId === lookPointer) lookPointer = null; });
+
+document.getElementById('touch-interact-btn').addEventListener('click', triggerProximityInteraction);
+const runBtn = document.getElementById('run-btn');
+runBtn.addEventListener('pointerdown', () => running = true);
+runBtn.addEventListener('pointerup', () => running = false);
+
+// Collisions
+function collides(p) {
+  if (p.x < -49 || p.x > 49 || p.z < -42 || p.z > 42) return true;
+  const blocks = [[0, -30, 14, 9], [-30, -14, 7, 6], [30, -14, 7, 6], [20, 28, 5, 4]];
+  for (const [bx, bz, hx, hz] of blocks) if (Math.abs(p.x - bx) < hx && Math.abs(p.z - bz) < hz) return true;
+  return false;
+}
+
+function triggerProximityInteraction() {
+  const pos = playerGroup.position;
+  if (pos.distanceTo(new THREE.Vector3(0, 0, -15)) < 4.5) {
+    openModal('modal-incense');
+  } else if (pos.distanceTo(new THREE.Vector3(-20, 0, 28)) < 4.5) {
+    openModal('modal-wish');
+  } else if (pos.distanceTo(new THREE.Vector3(20, 0, 28)) < 5) {
+    playSingingBowlSound();
+    showToast('许愿池：听水声荡漾，静心片刻。');
+  }
+}
+
+// Update Loop
+const cameraTarget = new THREE.Vector3();
+const desiredCamera = new THREE.Vector3();
+const forward = new THREE.Vector3(), right = new THREE.Vector3();
+
+const clock = new THREE.Clock();
+function update(dt, t) {
+  let ix = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + stickX;
+  let iz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + stickY;
+  const mag = Math.hypot(ix, iz); if (mag > 1) { ix /= mag; iz /= mag; }
+  const moving = mag > 0.08;
+  const speed = (running || keys.ShiftLeft || keys.ShiftRight) ? 8.5 : 5.0;
+
+  forward.set(-Math.sin(yaw), 0, -Math.cos(yaw));
+  right.set(Math.cos(yaw), 0, -Math.sin(yaw));
+  const dx = (right.x * ix + forward.x * (-iz)) * speed * dt;
+  const dz = (right.z * ix + forward.z * (-iz)) * speed * dt;
+
+  let nextPos = playerGroup.position.clone(); nextPos.x += dx;
+  if (!collides(nextPos)) playerGroup.position.x = nextPos.x;
+  nextPos.copy(playerGroup.position); nextPos.z += dz;
+  if (!collides(nextPos)) playerGroup.position.z = nextPos.z;
+
+  if (moving) {
+    const angle = Math.atan2(dx, dz);
+    if (Number.isFinite(angle)) playerGroup.rotation.y = THREE.MathUtils.damp(playerGroup.rotation.y, angle, 0.16, dt);
+  }
+
+  // Bobbing animation
+  const bob = moving ? Math.sin(t * (running ? 14 : 9)) * 0.045 : 0;
+  localAvatar.robe.position.y = 0.85 + bob;
+  localAvatar.head.position.y = 1.95 + bob;
+
+  // Third Person camera update
+  cameraTarget.set(playerGroup.position.x, playerGroup.position.y + 1.55, playerGroup.position.z);
+  const dist = 7.0;
+  desiredCamera.set(
+    cameraTarget.x + Math.sin(yaw) * Math.cos(pitch) * dist,
+    cameraTarget.y + Math.sin(pitch) * dist + 0.9,
+    cameraTarget.z + Math.cos(yaw) * Math.cos(pitch) * dist
+  );
+  camera.position.lerp(desiredCamera, 1 - Math.exp(-8 * dt));
+  camera.lookAt(cameraTarget);
+
+  // Nametags 3D projection
+  updateNametagPos(playerGroup.position, localNametag);
+  Object.keys(remotePlayers).forEach(id => {
+    const p = remotePlayers[id];
+    p.avatar.group.position.lerp(p.targetPos, 0.15);
+    p.avatar.group.rotation.y = THREE.MathUtils.damp(p.avatar.group.rotation.y, p.targetRot, 0.15, dt);
+    updateNametagPos(p.avatar.group.position, p.nametagEl);
+  });
+
+  // Proximity Hint Text
+  const pPos = playerGroup.position;
+  let hintMsg = '';
+  if (pPos.distanceTo(new THREE.Vector3(0, 0, -15)) < 4.5) hintMsg = '按 E / 点击「互动」进行上香';
+  else if (pPos.distanceTo(new THREE.Vector3(-20, 0, 28)) < 4.5) hintMsg = '许愿树 · 按 E / 点击「互动」系许愿带';
+  else if (pPos.distanceTo(new THREE.Vector3(20, 0, 28)) < 5) hintMsg = '许愿池 · 按 E 听梵音水声';
+  
+  const hintEl = document.getElementById('hint');
+  hintEl.textContent = hintMsg;
+  hintEl.style.opacity = hintMsg ? '1' : '0';
+
+  // Smoke Drift Animation
+  smokeList.forEach((s, idx) => {
+    s.mesh.position.y = 2.7 + idx * 0.25 + Math.sin(t * 0.8 + s.phase) * 0.15;
+    s.mesh.position.x = Math.sin(t * 0.65 + s.phase) * 0.25;
+  });
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.04), t = clock.elapsedTime;
+  update(dt, t);
+  renderer.render(scene, camera);
+}
+animate();
+
+// Hide Loading Screen
+const loading = document.getElementById('loading');
+setTimeout(() => { loading.style.opacity = '0'; setTimeout(() => loading.remove(), 500); }, 800);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --- RITUAL SUITE & MODAL HANDLERS ---
+let meritScore = parseInt(localStorage.getItem('zen_merit') || '108', 10);
+document.getElementById('merit-num').textContent = meritScore;
+
+function addMerit(amt, x, y) {
+  meritScore += amt;
+  localStorage.setItem('zen_merit', meritScore);
+  document.getElementById('merit-num').textContent = meritScore;
+
+  const el = document.createElement('div');
+  el.className = 'merit-float';
+  el.textContent = `功德 +${amt}`;
+  el.style.left = `${(x || window.innerWidth / 2) - 30}px`;
+  el.style.top = `${(y || window.innerHeight / 2) - 20}px`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
+// Navigation Tabs
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.view-pane').forEach(v => v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`view-${tab.getAttribute('data-tab')}`).classList.add('active');
+  });
+});
+
+// Sound Button
+let soundActive = false;
+document.getElementById('btn-audio').addEventListener('click', () => {
+  soundActive = !soundActive;
+  document.getElementById('icon-sound-off').style.display = soundActive ? 'none' : 'block';
+  document.getElementById('icon-sound-on').style.display = soundActive ? 'block' : 'none';
+  if (soundActive) playSingingBowlSound();
+});
+
+// Wooden Fish Widget
+document.getElementById('wooden-fish-widget').addEventListener('click', (e) => {
+  playWoodenFishSound();
+  addMerit(1, e.clientX, e.clientY);
+});
+document.getElementById('btn-merit-counter').addEventListener('click', (e) => {
+  playWoodenFishSound();
+  addMerit(1, e.clientX, e.clientY);
+});
+
+// Modals Setup
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+document.querySelectorAll('.close-btn').forEach(b => b.addEventListener('click', () => closeModal(b.getAttribute('data-close'))));
+
+// Profile Customization Modal
+document.getElementById('btn-edit-profile').addEventListener('click', () => {
+  document.getElementById('input-profile-name').value = myName;
+  document.getElementById('select-profile-color').value = '0x' + myColor.toString(16);
+  openModal('modal-profile');
+});
+
+document.getElementById('btn-save-profile').addEventListener('click', () => {
+  const newName = document.getElementById('input-profile-name').value.trim() || myName;
+  const newColor = parseInt(document.getElementById('select-profile-color').value);
+
+  myName = newName;
+  myColor = newColor;
+  localStorage.setItem('temple_my_name', myName);
+  localStorage.setItem('temple_my_color', myColor);
+
+  document.getElementById('label-my-name').textContent = myName;
+  localNametag.querySelector('strong').textContent = myName + ' (我)';
+
+  // Update avatar robe material color
+  playerGroup.remove(localAvatar.group);
+  localAvatar = createAvatarMesh(myColor);
+  playerGroup.add(localAvatar.group);
+
+  closeModal('modal-profile');
+  showToast('个人法号与僧袍形象已成功保存！');
+});
+
+// Chat Send Handler
+function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  myChatMessage = text;
+  showSpeechBubble(localNametag, myUserId, text);
+  appendChatMessage(myName + ' (我)', text);
+
+  // Clear chat sync variable after sending to allow duplicate messages later
+  clearTimeout(chatTimer);
+  chatTimer = setTimeout(() => { myChatMessage = ''; }, 3000);
+}
+document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
+document.getElementById('chat-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendChatMessage(); });
+
+// Gesture Bow Action
+document.getElementById('btn-gesture-pray').addEventListener('click', () => {
+  playSingingBowlSound();
+  actionStatus = '合十祈福';
+  localNametag.querySelector('.status-tag').textContent = actionStatus;
+  showToast(`${myName} 虔诚双手合十，为大众祈福。`);
+  addMerit(2);
+});
+
+// Incense Modal
+document.getElementById('btn-offer-incense').addEventListener('click', () => openModal('modal-incense'));
+document.getElementById('btn-confirm-incense').addEventListener('click', () => {
+  const type = document.getElementById('select-incense-type').value;
+  const wish = document.getElementById('input-incense-wish').value || '愿全家安康顺遂';
+  closeModal('modal-incense');
+  playSingingBowlSound();
+  addMerit(10);
+  actionStatus = `敬奉${type}`;
+  localNametag.querySelector('.status-tag').textContent = actionStatus;
+  showToast(`【祈福敬香】${myName} 上献了【${type}】：“${wish}”`);
+  appendChatMessage('系统广播', `${myName} 上献了【${type}】：“${wish}”`);
+});
+
+document.getElementById('btn-singing-bowl').addEventListener('click', () => {
+  playSingingBowlSound();
+  addMerit(3);
+  showToast('钟磬齐鸣，梵音静心。');
+});
+
+// Wishing Modal
+document.getElementById('btn-open-wish-modal').addEventListener('click', () => openModal('modal-wish'));
+document.getElementById('btn-confirm-wish').addEventListener('click', () => {
+  const name = document.getElementById('wish-name').value || myName;
+  const text = document.getElementById('wish-text').value || '愿所求皆所愿，家人平安。';
+  const color = document.getElementById('wish-color').value;
+
+  const hexMap = { red: 0xb54c3b, gold: 0xd9b35c, green: 0x2e8b57 };
+  addRibbonToTree(hexMap[color] || 0xb54c3b);
+
+  if (db) {
+    const wishesCol = collection(db, 'artifacts', appId, 'public', 'data', 'temple_wishes');
+    setDoc(doc(wishesCol), { roomId, name, text, color, timestamp: Date.now() });
+  }
+
+  closeModal('modal-wish');
+  addMerit(5);
+  showToast(`许愿带已挂在许愿树上！`);
+});
+
+// Fortune Slips Database
+const FORTUNES = [
+  { rank: "大吉", title: "第一签 · 莫向外求", poem: "心如大海静无波，万物沉浮一念过。<br>若问前程何处去，清风明月入沉香。", desc: "诸事大吉，内外顺遂。顺其自然，心无执念则福泽自至。", yi: "静心, 敬香", ji: "躁进, 争执" },
+  { rank: "上吉", title: "第二签 · 枯木逢春", poem: "雪尽寒消日渐长，东风吹绿野花香。<br>眼前虽有微云遮，转角即逢大光明。", desc: "过往困阻冰释，事业与情谊皆将迎来全新曙光。", yi: "坚持, 远行", ji: "悲观, 放弃" },
+  { rank: "中吉", title: "第三签 · 水到渠成", poem: "九层之台起垒土，千里之行始足下。<br>持之以恒无退缩，终见春风花满林。", desc: "脚踏实地，积少成多，所求之事终将顺理成章达成。", yi: "专注, 积累", ji: "投机, 浮躁" }
+];
+
+function triggerFortuneShake() {
+  const tube = document.getElementById('tube-element');
+  tube.classList.add('shaking');
+  let tick = 0;
+  const timer = setInterval(() => {
+    playWoodenFishSound();
+    tick++;
+    if (tick >= 5) {
+      clearInterval(timer);
+      tube.classList.remove('shaking');
+      const rand = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+      document.getElementById('fortune-rank').textContent = rand.rank;
+      document.getElementById('fortune-title').textContent = rand.title;
+      document.getElementById('fortune-poem').innerHTML = rand.poem;
+      document.getElementById('fortune-desc').textContent = rand.desc;
+      document.getElementById('fortune-yi').textContent = rand.yi;
+      document.getElementById('fortune-ji').textContent = rand.ji;
+      openModal('modal-fortune-result');
+      addMerit(8);
+    }
+  }, 150);
+}
+document.getElementById('btn-shake-fortune').addEventListener('click', triggerFortuneShake);
+document.getElementById('fortune-tube').addEventListener('click', triggerFortuneShake);
+
+// Share Room Link & Switcher
+document.getElementById('btn-share-room').addEventListener('click', () => {
+  const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+  const tempInput = document.createElement('input');
+  tempInput.value = shareUrl;
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  document.execCommand('copy');
+  document.body.removeChild(tempInput);
+  showToast(`同修房间专属链接已复制！发送链接邀请好友进入【${roomId}】`);
+});
+
+document.getElementById('btn-do-switch-room').addEventListener('click', () => {
+  const newRoom = document.getElementById('input-switch-room').value.trim();
+  if (!newRoom) return;
+  closeModal('modal-players');
+  subscribeToRoom(newRoom);
+  history.pushState(null, '', `?room=${newRoom}`);
+  showToast(`已成功切换入神庙房间【${newRoom}】！`);
+});
+
+// View Online Player Modal
+document.getElementById('btn-players-list').addEventListener('click', () => {
+  const listEl = document.getElementById('players-list-content');
+  listEl.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(232,199,123,0.14); padding:8px 12px; border-radius:8px;">
+      <span><strong>${myName} (我)</strong></span>
+      <span style="font-size:11px; color:var(--gold);">${actionStatus}</span>
+    </div>
+  `;
+  Object.values(remotePlayers).forEach(p => {
+    const nameText = p.nametagEl.querySelector('strong').textContent;
+    const statusText = p.nametagEl.querySelector('.status-tag').textContent;
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px;';
+    div.innerHTML = `<span>${nameText}</span><span style="font-size:11px; color:var(--text-muted);">${statusText}</span>`;
+    listEl.appendChild(div);
+  });
+  openModal('modal-players');
+});
+</script>
+</body>
+</html>
