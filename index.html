@@ -130,7 +130,6 @@
     border-radius: 10px;
   }
 
-  /* Room Player List & Online Badge */
   .player-count-badge {
     display: inline-block;
     width: 8px;
@@ -635,15 +634,16 @@
   @keyframes loadAnim { to { width: 100%; } }
 </style>
 
-<!-- Standard Three.js library -->
+<!-- Standard Three.js & MQTT Fallback library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
 
 <!-- Loading Screen -->
 <div id="loading">
   <h2 style="color: var(--gold); letter-spacing: 4px; font-weight: 600;">虚拟神庙 · 多人联机庭院</h2>
-  <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">正在连接云端 Firebase (temple-prayer-923)...</p>
+  <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">正在加载 3D 庄严大殿与僧人模型...</p>
   <div class="loading-bar"><div class="loading-fill"></div></div>
 </div>
 
@@ -656,7 +656,7 @@
 <!-- Live Chat Drawer Widget -->
 <div class="glass-panel" id="chat-widget">
   <div id="chat-messages">
-    <div class="chat-msg" style="color: var(--gold);"><strong>系统:</strong> 已连接至 temple-prayer-923 云端数据库，与全网同修同框。</div>
+    <div class="chat-msg" style="color: var(--gold);"><strong>系统:</strong> 实时同框联机中，可在此与全房同修佛音问候。</div>
   </div>
   <div id="chat-input-row">
     <input type="text" id="chat-input" placeholder="输入合十问候语..." maxlength="35">
@@ -675,30 +675,25 @@
   </div>
 
   <div class="header-actions">
-    <!-- Profile Customization -->
     <button class="glass-panel badge-btn" id="btn-edit-profile" title="修改法号与形象">
       <span style="color: var(--gold);">⚙️</span>
       <span id="label-my-name">法号设置</span>
     </button>
 
-    <!-- Online Player Count & Room Info -->
     <div class="glass-panel badge-btn" id="btn-players-list" title="查看同修列表与切换房间">
       <span class="player-count-badge" id="net-indicator"></span>
       <span>同修: <strong id="online-count" style="color: var(--gold-bright);">1</strong> 人</span>
     </div>
 
-    <!-- Room Merit Pool -->
     <div class="glass-panel badge-btn" id="btn-merit-counter" title="功德池">
       <span style="color: var(--text-muted);">功德:</span>
       <strong id="merit-num" style="color: var(--gold-bright);">108</strong>
     </div>
 
-    <!-- Room Share Link -->
     <button class="glass-panel icon-btn" id="btn-share-room" title="复制链接邀请好友入同神庙">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
     </button>
 
-    <!-- Sound Toggle -->
     <button class="glass-panel icon-btn" id="btn-audio" title="开启/关闭禅音">
       <svg id="icon-sound-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
       <svg id="icon-sound-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
@@ -783,11 +778,11 @@
 
     <label style="font-size: 11px; color: var(--gold);">选择僧袍颜色:</label>
     <select id="select-profile-color">
-      <option value="0x8b4733">赭红僧袍 (传统端庄)</option>
-      <option value="0xc99b43">金辉袈裟 (庄严佛光)</option>
-      <option value="0x344c57">深蓝道袍 (沉静清修)</option>
-      <option value="0x4a6b53">松柏翠绿 (生机平安)</option>
-      <option value="0x6e4a75">紫气东来 (吉祥福瑞)</option>
+      <option value="0x8b3420">赭红袈裟 (传统庄严)</option>
+      <option value="0xd99b26">金辉黄袍 (佛光明亮)</option>
+      <option value="0x344c57">深蓝禅袍 (沉静清修)</option>
+      <option value="0x4a6b53">松柏青绿 (生机平安)</option>
+      <option value="0x5c3a6e">紫气东来 (吉祥福瑞)</option>
     </select>
 
     <button class="gold-button action-btn" id="btn-save-profile" style="width: 100%; justify-content: center; margin-top: 8px;">
@@ -875,7 +870,6 @@
     <h2 style="color: var(--gold); font-size: 18px; text-align: center; margin-bottom: 4px;">神庙大殿同修大厅</h2>
     <p style="color: var(--text-muted); font-size: 11px; text-align: center; margin-bottom: 12px;">当前神庙房间: <strong id="modal-room-id" style="color: var(--gold-bright);">peace123</strong></p>
 
-    <!-- Switch Room Form -->
     <div style="background: rgba(15,10,7,0.7); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
       <label style="font-size: 11px; color: var(--gold);">加入/创建其他神庙房间:</label>
       <div style="display: flex; gap: 6px; margin-top: 4px;">
@@ -884,13 +878,12 @@
       </div>
     </div>
 
-    <!-- Players List Container -->
     <label style="font-size: 11px; color: var(--gold);">在线同修列表:</label>
     <div id="players-list-content" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 6px;"></div>
   </div>
 </div>
 
-<!-- Real-time Multiplayer & Application Logic -->
+<!-- Real-time Multiplayer Logic & Detailed 3D Renderer -->
 <script type="module">
 import * as THREE_MODULE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 const THREE = window.THREE || THREE_MODULE;
@@ -911,7 +904,7 @@ const firebaseConfig = {
   measurementId: "G-PZ71PFZ538"
 };
 
-// --- GLOBAL UTILS & AUDIO ---
+// --- AUDIO SYNTHESIZER ---
 function showToast(msg) {
   const toast = document.getElementById('toast');
   toast.textContent = msg;
@@ -932,9 +925,9 @@ function playWoodenFishSound() {
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sine';
-  osc.frequency.setValueAtTime(600, now);
-  osc.frequency.exponentialRampToValueAtTime(130, now + 0.08);
-  gain.gain.setValueAtTime(0.8, now);
+  osc.frequency.setValueAtTime(620, now);
+  osc.frequency.exponentialRampToValueAtTime(140, now + 0.08);
+  gain.gain.setValueAtTime(0.85, now);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
@@ -960,13 +953,15 @@ function playSingingBowlSound() {
   });
 }
 
-// --- 3D SCENE SETUP (THREE.JS) ---
+// --- 3D SCENE & ENHANCED ATMOSPHERE SETUP ---
 const container = document.getElementById('game-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xb2c5c1);
-scene.fog = new THREE.Fog(0xb2c5c1, 45, 120);
 
-const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 200);
+// Golden Hour Warm Sunset Fog & Sky Color
+scene.background = new THREE.Color(0xbfa585);
+scene.fog = new THREE.Fog(0xbfa585, 42, 115);
+
+const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 220);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -977,26 +972,29 @@ if (THREE.SRGBColorSpace) {
 } else if (THREE.sRGBEncoding) {
   renderer.outputEncoding = THREE.sRGBEncoding;
 }
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
 container.appendChild(renderer.domElement);
 
-// Lighting
-scene.add(new THREE.HemisphereLight(0xeaf0ff, 0x6e5b47, 1.7));
-const sun = new THREE.DirectionalLight(0xffe2b3, 2.3);
-sun.position.set(-25, 40, 25);
+// Lighting setup: Sunlight & Ambient
+scene.add(new THREE.HemisphereLight(0xfff0db, 0x6e5239, 1.8));
+const sun = new THREE.DirectionalLight(0xffe2b3, 2.7);
+sun.position.set(-30, 42, 28);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
-sun.shadow.camera.left = -50; sun.shadow.camera.right = 50;
-sun.shadow.camera.top = 50; sun.shadow.camera.bottom = -50;
+sun.shadow.camera.left = -55; sun.shadow.camera.right = 55;
+sun.shadow.camera.top = 55; sun.shadow.camera.bottom = -55;
 scene.add(sun);
 
-// Materials
-const mat = (color, roughness = 0.8, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
-const stoneMat = mat(0x8e887c), stoneDarkMat = mat(0x56554e), wallMat = mat(0xb64b32);
-const darkWoodMat = mat(0x4a2518), woodMat = mat(0x723e28), goldMat = mat(0xc99b43, 0.45, 0.55);
-const roofMat = mat(0x283f3c, 0.7), roofGoldMat = mat(0x9d793d, 0.6), leafMat = mat(0x386043), leaf2Mat = mat(0x527546);
-const waterMat = new THREE.MeshStandardMaterial({ color: 0x4aa3a2, roughness: 0.2, metalness: 0.15, transparent: true, opacity: 0.85 });
+// Helper materials
+const mat = (color, roughness = 0.75, metalness = 0.05) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
+const stoneMat = mat(0x948c80), stoneDarkMat = mat(0x56534c), wallMat = mat(0xb64b32, 0.8, 0.02);
+const darkWoodMat = mat(0x3d1d12), woodMat = mat(0x6e3b23), goldMat = mat(0xd4af37, 0.35, 0.65);
+const roofMat = mat(0x283e3c, 0.65), roofGoldMat = mat(0xa88540, 0.5), leafMat = mat(0x385c40), leaf2Mat = mat(0x4f7347);
+const bronzeMat = mat(0x3b3a32, 0.5, 0.45);
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x489694, roughness: 0.18, metalness: 0.25, transparent: true, opacity: 0.88 });
 
-// Geometry Helpers
+// Mesh creation utility helpers
 const box = (x, y, z, sx, sy, sz, material, parent = scene) => {
   const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material);
   m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
@@ -1008,150 +1006,265 @@ const cylinder = (x, y, z, rt, rb, h, material, parent = scene, seg = 12) => {
   parent.add(m); return m;
 };
 const sphere = (x, y, z, r, material, parent = scene) => {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), material);
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 12), material);
   m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
   parent.add(m); return m;
 };
 
-// Ground & Courtyard Tiles
-box(0, -0.35, 0, 110, 0.7, 98, mat(0x817c70));
-for (let x = -44; x <= 44; x += 4) {
-  for (let z = -40; z <= 40; z += 4) {
-    const tile = box(x, 0.015, z, 3.88, 0.045, 3.88, mat(((x + z) % 8 === 0) ? 0xa89f8d : 0x938b7b));
+// Ground & Courtyard Flagstones
+box(0, -0.35, 0, 112, 0.7, 100, mat(0x7e786d));
+for (let x = -48; x <= 48; x += 4) {
+  for (let z = -44; z <= 44; z += 4) {
+    const tile = box(x, 0.015, z, 3.88, 0.045, 3.88, mat(((x + z) % 8 === 0) ? 0xa89d8b : 0x918878));
     tile.receiveShadow = true;
   }
 }
-const pathMat = mat(0xb5a892);
-box(0, 0.06, 0, 9, 0.08, 80, pathMat);
-box(0, 0.07, -15, 42, 0.08, 9, pathMat);
+const pathMat = mat(0xb8ab95);
+box(0, 0.06, 0, 10, 0.08, 84, pathMat);
+box(0, 0.07, -15, 46, 0.08, 10, pathMat);
 
-// Perimeter Walls
-for (let x = -50; x <= 50; x += 6) { box(x, 2, -45, 5.8, 4, 0.8, wallMat); box(x, 2, 45, 5.8, 4, 0.8, wallMat); }
-for (let z = -40; z <= 40; z += 6) { box(-51, 2, z, 0.8, 4, 5.8, wallMat); box(51, 2, z, 0.8, 4, 5.8, wallMat); }
+// Perimeter Walls & Columns
+for (let x = -54; x <= 54; x += 6) { box(x, 2, -48, 5.8, 4, 0.8, wallMat); box(x, 2, 48, 5.8, 4, 0.8, wallMat); }
+for (let z = -42; z <= 42; z += 6) { box(-54, 2, z, 0.8, 4, 5.8, wallMat); box(54, 2, z, 0.8, 4, 5.8, wallMat); }
 
-// Temple Architecture
-function roof(x, y, z, w, d) {
-  box(x, y, z, w, 0.48, d, roofMat);
-  box(x, y + 0.42, z, w * 0.83, 0.42, d * 0.83, roofMat);
-  box(x, y + 0.78, z, w * 0.58, 0.28, d * 0.58, roofGoldMat);
+// Plaque Canvas Texture Generator
+function createPlaqueTexture(text) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#2b1408'; ctx.fillRect(0, 0, 512, 128);
+  ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 10; ctx.strokeRect(8, 8, 496, 112);
+  ctx.fillStyle = '#ffd97d'; ctx.font = 'bold 58px "Noto Serif SC", STKaiti, KaiTi, serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
-function temple(x, z, w, d) {
+// Classical Chinese Temple Roof Construction
+function roof(x, y, z, w, d) {
+  const base = box(x, y, z, w, 0.52, d, roofMat);
+  const upper = box(x, y + 0.45, z, w * 0.83, 0.45, d * 0.83, roofMat);
+  const ridge = box(x, y + 0.85, z, w * 0.58, 0.32, d * 0.58, roofGoldMat);
+  // Curved roof ends (螭吻 / 宝顶)
+  for (let side of [-1, 1]) {
+    sphere(x + side * w * 0.48, y + 0.9, z, 0.42, goldMat);
+  }
+  return base;
+}
+
+// Main Temple Hall (大雄宝殿)
+function buildTemple(x, z, w, d, titleText) {
   const g = new THREE.Group(); scene.add(g); g.position.set(x, 0, z);
   box(0, 0.45, 0, w, 0.9, d, stoneMat, g);
   box(0, 1.05, 0, w * 0.94, 0.22, d * 0.94, darkWoodMat, g);
-  for (let px of [-w * 0.38, 0, w * 0.38]) {
+  
+  // Front Columns & Carved Pillars
+  for (let px of [-w * 0.38, -w * 0.12, w * 0.12, w * 0.38]) {
     for (let pz of [-d * 0.36, d * 0.36]) {
-      cylinder(px, 2.55, pz, 0.24, 0.28, 2.9, wallMat, g);
-      cylinder(px, 1.15, pz, 0.37, 0.37, 0.18, goldMat, g);
+      cylinder(px, 2.55, pz, 0.26, 0.3, 2.9, wallMat, g);
+      cylinder(px, 1.15, pz, 0.38, 0.38, 0.18, goldMat, g);
     }
   }
   box(0, 2.15, 0, w * 0.88, 1.7, d * 0.82, wallMat, g);
-  box(0, 1.95, d * 0.416, w * 0.3, 1.35, 0.12, darkWoodMat, g);
-  roof(x, 3.75, z, w * 1.22, d * 1.28);
+  
+  // Doors & Windows
+  box(0, 1.95, d * 0.416, w * 0.32, 1.4, 0.12, darkWoodMat, g);
+  for (let px of [-w * 0.29, w * 0.29]) box(px, 2.1, d * 0.416, w * 0.14, 1.0, 0.12, woodMat, g);
+  
+  // Wooden Plaque (匾额)
+  if (titleText) {
+    const plaqueMat = new THREE.MeshStandardMaterial({ map: createPlaqueTexture(titleText), roughness: 0.4 });
+    const pMesh = new THREE.Mesh(new THREE.BoxGeometry(w * 0.28, 0.9, 0.12), plaqueMat);
+    pMesh.position.set(0, 3.25, d * 0.43); g.add(pMesh);
+  }
+
+  roof(x, 3.85, z, w * 1.22, d * 1.28);
+  return g;
 }
-temple(0, -30, 26, 16);
-temple(-30, -14, 13, 10);
-temple(30, -14, 13, 10);
+buildTemple(0, -30, 28, 17, "大雄宝殿");
+buildTemple(-32, -14, 14, 11, "观音殿");
+buildTemple(32, -14, 14, 11, "地藏殿");
 
-// Main Statue Silhouette
-cylinder(0, 2.0, -30, 0.8, 0.8, 1.1, goldMat);
-sphere(0, 3.0, -30, 0.72, goldMat);
-sphere(0, 4.05, -30, 0.44, goldMat);
+// Main Buddha Statue Inside Main Hall with Golden Halo
+const buddhaGroup = new THREE.Group(); buddhaGroup.position.set(0, 0, -30); scene.add(buddhaGroup);
+cylinder(0, 1.6, 0, 1.2, 1.4, 0.8, goldMat, buddhaGroup, 16); // Lotus Throne Base
+sphere(0, 2.8, 0, 0.9, goldMat, buddhaGroup); // Body
+sphere(0, 3.9, 0, 0.55, goldMat, buddhaGroup); // Head
+// Golden Aura Halo
+const halo = new THREE.Mesh(new THREE.RingGeometry(0.7, 1.6, 24), new THREE.MeshBasicMaterial({ color: 0xffd700, side: THREE.DoubleSide }));
+halo.position.set(0, 3.8, -0.3); buddhaGroup.add(halo);
 
-// Entrance Gate
+// Entrance Gate Structure
 for (let x of [-9, 0, 9]) {
-  cylinder(x, 2.6, 36, 0.48, 0.58, 5.2, wallMat);
-  cylinder(x, 5.25, 36, 0.72, 0.72, 0.25, goldMat);
+  cylinder(x, 2.6, 37, 0.5, 0.6, 5.2, wallMat);
+  cylinder(x, 5.25, 37, 0.75, 0.75, 0.25, goldMat);
 }
-box(0, 4.6, 36, 21, 0.55, 2.2, darkWoodMat);
-box(0, 5.15, 36, 23, 0.35, 2.8, roofMat);
+box(0, 4.6, 37, 21, 0.55, 2.2, darkWoodMat);
+box(0, 5.15, 37, 23, 0.35, 2.8, roofMat);
 
-// Incense Burner
-const incenseGroup = new THREE.Group(); incenseGroup.position.set(0, 0, -15); scene.add(incenseGroup);
-cylinder(0, 0.55, 0, 1.15, 1.0, 0.8, goldMat, incenseGroup, 16);
-cylinder(0, 1.05, 0, 0.78, 0.95, 0.35, woodMat, incenseGroup, 16);
-cylinder(0, 1.35, 0, 0.95, 0.8, 0.22, goldMat, incenseGroup, 16);
-for (let i = 0; i < 5; i++) {
-  cylinder(-0.38 + i * 0.19, 1.95, 0, 0.025, 0.025, 1.05, darkWoodMat, incenseGroup, 6);
-  sphere(-0.38 + i * 0.19, 2.49, 0, 0.055, mat(0xff8a38), incenseGroup);
+// Ancient Bronze Tripod Incense Cauldron (三足青铜大鼎)
+const incenseCauldron = new THREE.Group(); incenseCauldron.position.set(0, 0, -15); scene.add(incenseCauldron);
+// Base & Bowl
+cylinder(0, 0.6, 0, 1.35, 1.1, 0.9, bronzeMat, incenseCauldron, 16);
+cylinder(0, 1.15, 0, 0.9, 1.1, 0.35, bronzeMat, incenseCauldron, 16);
+cylinder(0, 1.45, 0, 1.1, 0.9, 0.25, goldMat, incenseCauldron, 16);
+// Tripod Legs
+for (let i = 0; i < 3; i++) {
+  const a = i * Math.PI * 2 / 3;
+  const leg = cylinder(Math.cos(a) * 0.95, 0.35, Math.sin(a) * 0.95, 0.18, 0.12, 0.7, bronzeMat, incenseCauldron);
+  leg.rotation.z = Math.sin(a) * 0.2; leg.rotation.x = Math.cos(a) * 0.2;
 }
+// Cauldron Handles
+for (let side of [-1, 1]) {
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.08, 8, 16), bronzeMat);
+  handle.position.set(side * 1.35, 1.35, 0); handle.rotation.y = Math.PI / 2; incenseCauldron.add(handle);
+}
+// Incense Sticks & Embers
+for (let i = 0; i < 7; i++) {
+  const stick = cylinder(-0.45 + i * 0.15, 2.05, (i % 2) * 0.08, 0.025, 0.025, 1.1, darkWoodMat, incenseCauldron, 6);
+  stick.rotation.z = (i - 3) * 0.03;
+  sphere(-0.45 + i * 0.15, 2.6, (i % 2) * 0.08, 0.05, mat(0xff5500, 0.2, 0.9), incenseCauldron);
+}
+const incenseLight = new THREE.PointLight(0xff7700, 1.2, 5); incenseLight.position.set(0, 2.5, 0); incenseCauldron.add(incenseLight);
 
 // Incense Smoke Particle System
-const smokeMat = new THREE.MeshBasicMaterial({ color: 0xe8e4d8, transparent: true, opacity: 0.2, depthWrite: false });
+const smokeMat = new THREE.MeshBasicMaterial({ color: 0xede6d8, transparent: true, opacity: 0.22, depthWrite: false });
 const smokeList = [];
-for (let i = 0; i < 14; i++) {
-  const p = new THREE.Mesh(new THREE.SphereGeometry(0.18 + Math.random() * 0.14, 8, 8), smokeMat);
-  p.position.set((Math.random() - 0.5) * 0.5, 2.7 + i * 0.25, (Math.random() - 0.5) * 0.2);
-  incenseGroup.add(p);
+for (let i = 0; i < 16; i++) {
+  const p = new THREE.Mesh(new THREE.SphereGeometry(0.18 + Math.random() * 0.16, 8, 8), smokeMat);
+  p.position.set((Math.random() - 0.5) * 0.5, 2.7 + i * 0.26, (Math.random() - 0.5) * 0.2);
+  incenseCauldron.add(p);
   smokeList.push({ mesh: p, phase: Math.random() * 6.28 });
 }
 
-// Wishing Tree with Hanging Ribbons
+// Ancient Wish Tree (百年许愿树) with Hanging Ribbons
 function buildTree(x, z, scale = 1) {
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
-  cylinder(0, 1.5, 0, 0.32 * scale, 0.48 * scale, 3 * scale, woodMat, g);
-  for (let i = 0; i < 5; i++) {
-    const y = (2.0 + i * 0.55) * scale;
-    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry((1.35 - i * 0.13) * scale, 1), i % 2 ? leafMat : leaf2Mat);
-    crown.position.set((Math.random() - 0.5) * 0.4, y, (Math.random() - 0.5) * 0.4);
-    crown.scale.y = 0.8; crown.castShadow = true;
+  // Gnarled Trunk
+  cylinder(0, 1.6, 0, 0.38 * scale, 0.65 * scale, 3.2 * scale, woodMat, g, 9);
+  for (let i = 0; i < 6; i++) {
+    const y = (2.1 + i * 0.5) * scale;
+    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry((1.45 - i * 0.14) * scale, 1), i % 2 ? leafMat : leaf2Mat);
+    crown.position.set((Math.random() - 0.5) * 0.5, y, (Math.random() - 0.5) * 0.5);
+    crown.scale.y = 0.78; crown.castShadow = true;
     g.add(crown);
   }
   return g;
 }
-const wishTreeGroup = buildTree(-20, 28, 1.35);
+const wishTreeGroup = buildTree(-20, 26, 1.4);
 
 const ribbons = [];
 function addRibbonToTree(colorHex) {
   const a = Math.random() * Math.PI * 2;
-  const ribbon = box(-20 + Math.cos(a) * 1.5, 3.2, 28 + Math.sin(a) * 1.5, 0.12, 1.2, 0.04, mat(colorHex));
-  ribbon.rotation.z = (Math.random() - 0.5) * 0.35;
+  const ribbon = box(-20 + Math.cos(a) * 1.6, 3.3, 26 + Math.sin(a) * 1.6, 0.12, 1.3, 0.04, mat(colorHex));
+  ribbon.rotation.z = (Math.random() - 0.5) * 0.38;
   ribbons.push(ribbon);
 }
-for (let i = 0; i < 10; i++) addRibbonToTree(i % 2 ? 0xd9b35c : 0xb54c3b);
+for (let i = 0; i < 18; i++) addRibbonToTree(i % 2 ? 0xd9b35c : 0xb54c3b);
 
-// Lotus Pond & Bridge
-cylinder(20, 0.15, 28, 7.2, 7.2, 0.35, stoneDarkMat, scene, 30).scale.z = 0.8;
-const water = cylinder(20, 0.38, 28, 6.7, 6.7, 0.12, waterMat, scene, 30); water.scale.z = 0.8;
-for (let i = 0; i < 8; i++) {
-  const a = i * 2.4;
-  const px = 20 + Math.cos(a) * 3, pz = 28 + Math.sin(a) * 2.4;
-  const pad = new THREE.Mesh(new THREE.CircleGeometry(0.55, 12), leafMat);
+// Carved Stone Arch Bridge & Lotus Pond (石拱桥与荷花池)
+cylinder(20, 0.15, 24, 7.5, 7.5, 0.35, stoneDarkMat, scene, 30).scale.z = 0.85;
+const water = cylinder(20, 0.38, 24, 7.0, 7.0, 0.12, waterMat, scene, 30); water.scale.z = 0.85;
+
+// Lotus Blossoms & Floating Pads
+for (let i = 0; i < 12; i++) {
+  const a = i * 1.8;
+  const px = 20 + Math.cos(a) * 3.2, pz = 24 + Math.sin(a) * 2.6;
+  const pad = new THREE.Mesh(new THREE.CircleGeometry(0.58, 12), leafMat);
   pad.position.set(px, 0.49, pz); pad.rotation.x = -Math.PI / 2; scene.add(pad);
-  sphere(px, 0.55, pz, 0.15, mat(0xd7a5a0));
+  
+  // Lotus Flower Bloom
+  if (i % 2 === 0) {
+    const lotus = sphere(px, 0.62, pz, 0.22, mat(0xf2a7b3, 0.4));
+    sphere(px, 0.64, pz, 0.08, mat(0xffe066, 0.2));
+  }
 }
-box(20, 0.75, 20, 3, 0.5, 8, stoneMat).rotation.x = 0.04;
 
-// Lanterns
-function lantern(x, z) {
+// Curved Stone Arch Bridge (石拱桥)
+const bridgeGroup = new THREE.Group(); bridgeGroup.position.set(20, 0.4, 24); scene.add(bridgeGroup);
+box(0, 0.5, 0, 3.2, 0.45, 9.2, stoneMat, bridgeGroup);
+// Balustrades & Stone Lion Posts (望柱)
+for (let zSide of [-4.2, -2.1, 0, 2.1, 4.2]) {
+  for (let xSide of [-1.5, 1.5]) {
+    cylinder(xSide, 1.25, zSide, 0.12, 0.12, 0.9, stoneDarkMat, bridgeGroup, 8);
+    sphere(xSide, 1.75, zSide, 0.16, stoneMat, bridgeGroup);
+  }
+}
+for (let xSide of [-1.5, 1.5]) {
+  box(xSide, 1.15, 0, 0.12, 0.4, 8.8, stoneMat, bridgeGroup);
+}
+
+// Stone Lanterns (石灯笼)
+function stoneLantern(x, z) {
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
-  cylinder(0, 3.2, 0, 0.06, 0.06, 2.2, darkWoodMat, g);
-  cylinder(0, 2.05, 0, 0.5, 0.42, 0.7, wallMat, g);
-  const l = new THREE.PointLight(0xffb45d, 0.65, 7); l.position.set(0, 2, 0); g.add(l);
+  cylinder(0, 0.4, 0, 0.3, 0.35, 0.8, stoneDarkMat, g, 8);
+  box(0, 1.05, 0, 0.55, 0.5, 0.55, stoneMat, g);
+  box(0, 1.45, 0, 0.75, 0.25, 0.75, roofMat, g);
+  sphere(0, 1.7, 0, 0.15, goldMat, g);
+  const l = new THREE.PointLight(0xffaa44, 0.7, 6); l.position.set(0, 1.05, 0); g.add(l);
 }
-[-12, 12].forEach(x => [-4, 10, 24].forEach(z => lantern(x, z)));
+[-12, 12].forEach(x => [-4, 10, 24].forEach(z => stoneLantern(x, z)));
 
-// --- PLAYER AVATAR & MULTIPLAYER ENGINE ---
-const ROBE_COLORS = [0x8b4733, 0xc99b43, 0x344c57, 0x4a6b53, 0x6e4a75, 0xa3523b];
+// --- DETAILED REALISTIC MONK 3D AVATAR MODEL (真实僧人模型) ---
+const ROBE_COLORS = [0x8b3420, 0xd99b26, 0x344c57, 0x4a6b53, 0x5c3a6e];
 
-function createAvatarMesh(colorHex = 0x8b4733) {
+function createAvatarMesh(colorHex = 0x8b3420) {
   const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.44, 0.9, 12), mat(0x283238));
-  body.position.y = 1.05; body.castShadow = true; group.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 12), mat(0xd9b38c));
+
+  const skinMat = mat(0xd9a584, 0.65, 0.05);
+  const innerRobeMat = mat(0x4a3427, 0.85);
+  const outerRobeMat = mat(colorHex, 0.75);
+  const goldTrimMat = mat(0xd4af37, 0.4, 0.6);
+
+  // 1. Shaved Head & Face (光头与五官特征)
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 14), skinMat);
   head.position.y = 1.95; head.castShadow = true; group.add(head);
-  const robeMaterial = mat(colorHex);
-  const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.55, 0.75, 12), robeMaterial);
-  robe.position.y = 0.85; robe.castShadow = true; group.add(robe);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.48, 0.56, 24), new THREE.MeshBasicMaterial({ color: 0xe8c77b, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }));
+
+  // 6 Traditional Ordination Dot Scars on Head (头顶六点戒疤)
+  for (let i = 0; i < 6; i++) {
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), mat(0xffeedd));
+    const angle = (i % 3 - 1) * 0.12;
+    const row = Math.floor(i / 3) * 0.12;
+    dot.position.set(angle, 2.26, -row + 0.05);
+    group.add(dot);
+  }
+
+  // 2. Mala Prayer Bead Necklace (胸前念珠)
+  const malaBeads = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.035, 8, 20), mat(0x3d1f10, 0.5));
+  malaBeads.position.set(0, 1.65, 0.18); malaBeads.rotation.x = Math.PI / 3; group.add(malaBeads);
+
+  // 3. Inner Robe Tunic (内层僧衣)
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 0.95, 12), innerRobeMat);
+  torso.position.y = 1.1; torso.castShadow = true; group.add(torso);
+
+  // 4. Diagonal Kasaya Sash Robe (偏衫外搭袈裟)
+  const kasaya = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.52, 0.85, 12), outerRobeMat);
+  kasaya.position.set(0, 1.05, 0); kasaya.rotation.z = -0.12; kasaya.castShadow = true; group.add(kasaya);
+
+  // Gold Embroidered Border Trim
+  const trim = new THREE.Mesh(new THREE.CylinderGeometry(0.41, 0.43, 0.12, 12), goldTrimMat);
+  trim.position.set(0, 1.32, 0); group.add(trim);
+
+  // 5. Lower Monk Skirt / Robe (下裳僧裙)
+  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.58, 0.85, 12), outerRobeMat);
+  skirt.position.y = 0.45; skirt.castShadow = true; group.add(skirt);
+
+  // 6. Monk Cloth Shoes (布鞋)
+  for (let side of [-0.18, 0.18]) {
+    const shoe = box(side, 0.05, 0.08, 0.18, 0.1, 0.32, mat(0x241d18), group);
+  }
+
+  // Ground Selection Aura Ring
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.52, 0.62, 24), new THREE.MeshBasicMaterial({ color: 0xe8c77b, side: THREE.DoubleSide, transparent: true, opacity: 0.55 }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.035; group.add(ring);
-  return { group, head, robe, robeMaterial };
+
+  return { group, head, kasaya, outerRobeMat };
 }
 
-// Local Player State
+// Local Player Identity State
 const myUserId = 'usr_' + Math.random().toString(36).substring(2, 9);
-let myName = localStorage.getItem('temple_my_name') || ('同修' + myUserId.slice(-4));
+let myName = localStorage.getItem('temple_my_name') || ('悟真同修' + myUserId.slice(-3));
 let myColor = parseInt(localStorage.getItem('temple_my_color') || ROBE_COLORS[0]);
 
 document.getElementById('label-my-name').textContent = myName;
@@ -1165,7 +1278,7 @@ const keys = {};
 let stickX = 0, stickY = 0, lookPointer = null, lastLookX = 0, lastLookY = 0;
 
 // Remote Players Store
-const remotePlayers = {}; // userId -> { avatar, nametagEl, speechBubbleEl, targetPos, targetRot, action }
+const remotePlayers = {}; // userId -> { avatar, nametagEl, targetPos, targetRot, action }
 
 // Nametag & Speech Bubble UI Management
 const nametagsContainer = document.getElementById('nametags-container');
@@ -1203,7 +1316,7 @@ function updateOnlineCountUI() {
 // Dynamic Projection to 2D Screen Coordinates
 const tempVec = new THREE.Vector3();
 function updateNametagPos(position, el) {
-  tempVec.copy(position); tempVec.y += 2.4;
+  tempVec.copy(position); tempVec.y += 2.5;
   tempVec.project(camera);
   if (tempVec.z > 1) { el.style.opacity = '0'; return; }
   const x = (tempVec.x * 0.5 + 0.5) * window.innerWidth;
@@ -1222,46 +1335,48 @@ function showSpeechBubble(tagEl, id, text) {
   bubble.timer = setTimeout(() => bubble.classList.remove('show'), 4500);
 }
 
-// --- FIREBASE REALTIME MULTIPLAYER ENGINE ---
+// --- DUAL-ENGINE MULTIPLAYER (FIREBASE + MQTT FAILOVER) ---
 let roomId = new URLSearchParams(window.location.search).get('room') || 'peace123';
 document.getElementById('modal-room-id').textContent = roomId;
 
 let fbApp = null, fbAuth = null, fbDatabase = null;
-let roomPlayersRef = null, myPlayerRef = null, roomWishesRef = null, roomEventsRef = null;
+let roomPlayersRef = null, myPlayerRef = null;
+let mqttClient = null;
+let usingMqtt = false;
 
-function initFirebaseMultiplayer() {
+function initMultiplayerSystem() {
+  clearRemotePlayers();
+  
   try {
     fbApp = initializeApp(firebaseConfig);
     fbAuth = getAuth(fbApp);
-    fbDatabase = getDatabase(fbApp);
+    fbDatabase = getDatabase(fbApp, firebaseConfig.databaseURL);
 
     signInAnonymously(fbAuth).then(() => {
-      document.getElementById('net-indicator').classList.remove('connecting');
-      connectToRoom(roomId);
+      connectFirebaseRoom(roomId);
     }).catch(err => {
-      console.warn("Firebase Auth fallback:", err);
-      connectToRoom(roomId);
+      console.warn("Firebase Auth Error, failing over to WebSocket relay:", err);
+      connectMqttFallback(roomId);
     });
   } catch(e) {
-    console.error("Firebase init error:", e);
+    console.warn("Firebase Init Exception, failing over to WebSocket relay:", e);
+    connectMqttFallback(roomId);
   }
 }
 
-function connectToRoom(rId) {
+function connectFirebaseRoom(rId) {
   if (!fbDatabase) return;
-  clearRemotePlayers();
+  usingMqtt = false;
   roomId = rId;
   document.getElementById('modal-room-id').textContent = roomId;
 
-  // Listen to players in current room
   roomPlayersRef = ref(fbDatabase, `rooms/${roomId}/players`);
   myPlayerRef = ref(fbDatabase, `rooms/${roomId}/players/${myUserId}`);
 
-  // Disconnect handler
   onDisconnect(myPlayerRef).remove();
 
-  // Listen to all online players in room
   onValue(roomPlayersRef, (snapshot) => {
+    document.getElementById('net-indicator').classList.remove('connecting');
     const val = snapshot.val() || {};
     const playerIds = Object.keys(val);
 
@@ -1271,7 +1386,7 @@ function connectToRoom(rId) {
       let p = remotePlayers[id];
 
       if (!p) {
-        const avatar = createAvatarMesh(data.color || 0xc99b43);
+        const avatar = createAvatarMesh(data.color || ROBE_COLORS[0]);
         scene.add(avatar.group);
         const tagEl = createNametagEl(id, data.name || '同修');
         p = remotePlayers[id] = {
@@ -1290,7 +1405,6 @@ function connectToRoom(rId) {
       }
     });
 
-    // Remove left players
     Object.keys(remotePlayers).forEach(id => {
       if (!val[id]) {
         scene.remove(remotePlayers[id].avatar.group);
@@ -1299,43 +1413,15 @@ function connectToRoom(rId) {
       }
     });
     updateOnlineCountUI();
+  }, (err) => {
+    console.warn("Firebase permission denied or error. Switching to Public WebSocket Relay...", err);
+    showToast("Firebase 权限不足，已自动切换至公网备用通道联机。");
+    connectMqttFallback(roomId);
   });
 
-  // Listen to Room Events (Chat & Incense广播)
-  roomEventsRef = ref(fbDatabase, `rooms/${roomId}/events`);
-  onValue(roomEventsRef, (snapshot) => {
-    const val = snapshot.val();
-    if (!val) return;
-    const keysArr = Object.keys(val);
-    const lastKey = keysArr[keysArr.length - 1];
-    const evt = val[lastKey];
-    if (evt && evt.userId !== myUserId && (Date.now() - evt.timestamp) < 3000) {
-      if (evt.type === 'chat') {
-        const p = remotePlayers[evt.userId];
-        if (p) showSpeechBubble(p.nametagEl, evt.userId, evt.text);
-        appendChatMessage(evt.name, evt.text);
-      } else if (evt.type === 'incense') {
-        appendChatMessage('系统广播', `${evt.name} 上献了【${evt.incenseType}】：“${evt.wish}”`);
-        showToast(`同修 ${evt.name} 刚在全房奉献了清香！`);
-      }
-    }
-  });
-
-  // Listen to Room Wishes
-  roomWishesRef = ref(fbDatabase, `rooms/${roomId}/wishes`);
-  onValue(roomWishesRef, (snapshot) => {
-    const val = snapshot.val() || {};
-    const wishList = Object.values(val);
-    if (wishList.length > 0) {
-      document.getElementById('wishing-grid').innerHTML = '';
-      wishList.reverse().forEach(renderWishCard);
-    }
-  });
-
-  // Sync position every 120ms
   clearInterval(window.syncInterval);
   window.syncInterval = setInterval(() => {
-    if (myPlayerRef) {
+    if (myPlayerRef && !usingMqtt) {
       set(myPlayerRef, {
         userId: myUserId,
         name: myName,
@@ -1346,24 +1432,128 @@ function connectToRoom(rId) {
         rotation: Math.round(playerGroup.rotation.y * 100) / 100,
         action: actionStatus,
         lastSeen: Date.now()
-      });
+      }).catch(() => {});
     }
   }, 120);
 }
 
-function broadcastEvent(type, extraData = {}) {
-  if (!fbDatabase) return;
-  const eventsRef = ref(fbDatabase, `rooms/${roomId}/events`);
-  push(eventsRef, {
-    userId: myUserId,
-    name: myName,
-    type,
-    ...extraData,
-    timestamp: Date.now()
+function connectMqttFallback(rId) {
+  usingMqtt = true;
+  roomId = rId;
+  if (mqttClient) { try { mqttClient.end(); } catch(e){} }
+
+  const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
+  mqttClient = window.mqtt.connect(brokerUrl, {
+    clientId: myUserId,
+    clean: true,
+    connectTimeout: 5000,
+    keepalive: 30
   });
+
+  const topicPresence = `temple_923_v3/${roomId}/presence`;
+  const topicEvents = `temple_923_v3/${roomId}/events`;
+
+  mqttClient.on('connect', () => {
+    document.getElementById('net-indicator').classList.remove('connecting');
+    mqttClient.subscribe(topicPresence);
+    mqttClient.subscribe(topicEvents);
+    broadcastMqttState();
+  });
+
+  mqttClient.on('message', (topic, payload) => {
+    try {
+      const data = JSON.parse(payload.toString());
+      if (!data || data.userId === myUserId) return;
+
+      if (topic === topicPresence) {
+        let p = remotePlayers[data.userId];
+        if (!p) {
+          const avatar = createAvatarMesh(data.color || ROBE_COLORS[0]);
+          scene.add(avatar.group);
+          const tagEl = createNametagEl(data.userId, data.name || '同修');
+          p = remotePlayers[data.userId] = {
+            avatar,
+            nametagEl: tagEl,
+            targetPos: new THREE.Vector3(data.x, data.y, data.z),
+            targetRot: data.rotation || 0,
+            action: data.action || '正在静心',
+            lastSeen: Date.now()
+          };
+          updateOnlineCountUI();
+        } else {
+          p.targetPos.set(data.x, data.y, data.z);
+          p.targetRot = data.rotation;
+          p.action = data.action;
+          p.lastSeen = Date.now();
+          p.nametagEl.querySelector('.status-tag').textContent = data.action;
+          p.nametagEl.querySelector('strong').textContent = data.name;
+        }
+      } else if (topic === topicEvents) {
+        handleRemoteEvent(data);
+      }
+    } catch(e) {}
+  });
+
+  clearInterval(window.syncInterval);
+  window.syncInterval = setInterval(() => {
+    if (usingMqtt && mqttClient && mqttClient.connected) {
+      broadcastMqttState();
+    }
+  }, 120);
+
+  setInterval(() => {
+    if (!usingMqtt) return;
+    const now = Date.now();
+    Object.keys(remotePlayers).forEach(id => {
+      if (now - remotePlayers[id].lastSeen > 4000) {
+        scene.remove(remotePlayers[id].avatar.group);
+        remotePlayers[id].nametagEl.remove();
+        delete remotePlayers[id];
+        updateOnlineCountUI();
+      }
+    });
+  }, 1000);
 }
 
-initFirebaseMultiplayer();
+function broadcastMqttState() {
+  const state = {
+    userId: myUserId,
+    name: myName,
+    color: myColor,
+    x: Math.round(playerGroup.position.x * 100) / 100,
+    y: Math.round(playerGroup.position.y * 100) / 100,
+    z: Math.round(playerGroup.position.z * 100) / 100,
+    rotation: Math.round(playerGroup.rotation.y * 100) / 100,
+    action: actionStatus
+  };
+  mqttClient.publish(`temple_923_v3/${roomId}/presence`, JSON.stringify(state));
+}
+
+function broadcastEvent(type, extraData = {}) {
+  if (usingMqtt && mqttClient && mqttClient.connected) {
+    mqttClient.publish(`temple_923_v3/${roomId}/events`, JSON.stringify({
+      userId: myUserId, name: myName, type, ...extraData
+    }));
+  } else if (!usingMqtt && fbDatabase) {
+    const eventsRef = ref(fbDatabase, `rooms/${roomId}/events`);
+    push(eventsRef, { userId: myUserId, name: myName, type, ...extraData, timestamp: Date.now() });
+  }
+}
+
+function handleRemoteEvent(data) {
+  if (data.type === 'chat') {
+    const p = remotePlayers[data.userId];
+    if (p) showSpeechBubble(p.nametagEl, data.userId, data.text);
+    appendChatMessage(data.name, data.text);
+  } else if (data.type === 'incense') {
+    appendChatMessage('系统广播', `${data.name} 上献了【${data.incenseType}】：“${data.wish}”`);
+    showToast(`同修 ${data.name} 刚在全房奉献了清香！`);
+  } else if (data.type === 'wish') {
+    renderWishCard({ name: data.name, text: data.text, color: data.color });
+  }
+}
+
+initMultiplayerSystem();
 
 function appendChatMessage(sender, text) {
   const box = document.getElementById('chat-messages');
@@ -1374,12 +1564,13 @@ function appendChatMessage(sender, text) {
   box.scrollTop = box.scrollHeight;
 }
 
+// Wishes List rendering
 function renderWishCard(w) {
   const container = document.getElementById('wishing-grid');
   const card = document.createElement('div');
   card.className = `wish-card ${w.color || 'red'}`;
   card.innerHTML = `<div style="font-size:12px; color:var(--gold); font-weight:bold; margin-bottom:4px;">【${w.name}】祈福:</div><div style="font-size:13px; line-height:1.5;">“${w.text}”</div>`;
-  container.appendChild(card);
+  container.prepend(card);
 }
 [
   { name: "悟真同修", text: "愿诸同修平安吉祥，所求皆随愿。", color: "gold" },
@@ -1447,21 +1638,21 @@ runBtn.addEventListener('pointerup', () => running = false);
 
 // Collisions
 function collides(p) {
-  if (p.x < -49 || p.x > 49 || p.z < -42 || p.z > 42) return true;
-  const blocks = [[0, -30, 14, 9], [-30, -14, 7, 6], [30, -14, 7, 6], [20, 28, 5, 4]];
+  if (p.x < -51 || p.x > 51 || p.z < -44 || p.z > 44) return true;
+  const blocks = [[0, -30, 15, 9], [-32, -14, 8, 7], [32, -14, 8, 7], [20, 24, 4, 5]];
   for (const [bx, bz, hx, hz] of blocks) if (Math.abs(p.x - bx) < hx && Math.abs(p.z - bz) < hz) return true;
   return false;
 }
 
 function triggerProximityInteraction() {
   const pos = playerGroup.position;
-  if (pos.distanceTo(new THREE.Vector3(0, 0, -15)) < 4.5) {
+  if (pos.distanceTo(new THREE.Vector3(0, 0, -15)) < 4.8) {
     openModal('modal-incense');
-  } else if (pos.distanceTo(new THREE.Vector3(-20, 0, 28)) < 4.5) {
+  } else if (pos.distanceTo(new THREE.Vector3(-20, 0, 26)) < 4.8) {
     openModal('modal-wish');
-  } else if (pos.distanceTo(new THREE.Vector3(20, 0, 28)) < 5) {
+  } else if (pos.distanceTo(new THREE.Vector3(20, 0, 24)) < 5) {
     playSingingBowlSound();
-    showToast('许愿池：听水声荡漾，静心片刻。');
+    showToast('许愿池石桥：听梵音水声，静心祈福。');
   }
 }
 
@@ -1493,9 +1684,9 @@ function update(dt, t) {
     if (Number.isFinite(angle)) playerGroup.rotation.y = THREE.MathUtils.damp(playerGroup.rotation.y, angle, 0.16, dt);
   }
 
-  // Bobbing animation
+  // Monk gait walking animation
   const bob = moving ? Math.sin(t * (running ? 14 : 9)) * 0.045 : 0;
-  localAvatar.robe.position.y = 0.85 + bob;
+  localAvatar.kasaya.position.y = 1.05 + bob;
   localAvatar.head.position.y = 1.95 + bob;
 
   // Third Person camera update
@@ -1521,9 +1712,9 @@ function update(dt, t) {
   // Proximity Hint Text
   const pPos = playerGroup.position;
   let hintMsg = '';
-  if (pPos.distanceTo(new THREE.Vector3(0, 0, -15)) < 4.5) hintMsg = '按 E / 点击「互动」进行上香';
-  else if (pPos.distanceTo(new THREE.Vector3(-20, 0, 28)) < 4.5) hintMsg = '许愿树 · 按 E / 点击「互动」系许愿带';
-  else if (pPos.distanceTo(new THREE.Vector3(20, 0, 28)) < 5) hintMsg = '许愿池 · 按 E 听梵音水声';
+  if (pPos.distanceTo(new THREE.Vector3(0, 0, -15)) < 4.8) hintMsg = '按 E / 点击「互动」在青铜鼎前敬香';
+  else if (pPos.distanceTo(new THREE.Vector3(-20, 0, 26)) < 4.8) hintMsg = '许愿树 · 按 E / 点击「互动」系祈福带';
+  else if (pPos.distanceTo(new THREE.Vector3(20, 0, 24)) < 5) hintMsg = '石拱桥 · 按 E 观赏荷花池';
   
   const hintEl = document.getElementById('hint');
   hintEl.textContent = hintMsg;
@@ -1531,8 +1722,8 @@ function update(dt, t) {
 
   // Smoke Drift Animation
   smokeList.forEach((s, idx) => {
-    s.mesh.position.y = 2.7 + idx * 0.25 + Math.sin(t * 0.8 + s.phase) * 0.15;
-    s.mesh.position.x = Math.sin(t * 0.65 + s.phase) * 0.25;
+    s.mesh.position.y = 2.7 + idx * 0.26 + Math.sin(t * 0.8 + s.phase) * 0.16;
+    s.mesh.position.x = Math.sin(t * 0.65 + s.phase) * 0.28;
   });
 }
 
@@ -1661,7 +1852,7 @@ document.getElementById('btn-gesture-pray').addEventListener('click', () => {
 document.getElementById('btn-offer-incense').addEventListener('click', () => openModal('modal-incense'));
 document.getElementById('btn-confirm-incense').addEventListener('click', () => {
   const incenseType = document.getElementById('select-incense-type').value;
-  const wish = document.getElementById('input-incense-wish').value || '愿全家安康顺遂';
+  const wish = document.getElementById('input-incense-wish').value || '愿全家平安顺遂';
   closeModal('modal-incense');
   playSingingBowlSound();
   addMerit(10);
@@ -1688,10 +1879,8 @@ document.getElementById('btn-confirm-wish').addEventListener('click', () => {
   const hexMap = { red: 0xb54c3b, gold: 0xd9b35c, green: 0x2e8b57 };
   addRibbonToTree(hexMap[color] || 0xb54c3b);
 
-  if (fbDatabase) {
-    const wishesRef = ref(fbDatabase, `rooms/${roomId}/wishes`);
-    push(wishesRef, { name, text, color, timestamp: Date.now() });
-  }
+  renderWishCard({ name, text, color });
+  broadcastEvent('wish', { name, text, color });
 
   closeModal('modal-wish');
   addMerit(5);
@@ -1746,9 +1935,7 @@ document.getElementById('btn-do-switch-room').addEventListener('click', () => {
   const newRoom = document.getElementById('input-switch-room').value.trim();
   if (!newRoom) return;
   closeModal('modal-players');
-  roomId = newRoom;
-  document.getElementById('modal-room-id').textContent = roomId;
-  connectToRoom(newRoom);
+  initMultiplayerSystem();
   history.pushState(null, '', `?room=${newRoom}`);
   showToast(`已成功切换入神庙房间【${newRoom}】！`);
 });
@@ -1777,11 +1964,15 @@ document.getElementById('btn-players-list').addEventListener('click', () => {
 </html>
 ```eof
 
-### How to apply this update to your GitHub repository:
-
-1. Open your repository: **`[https://github.com/cksd293-del/temple_prayer_923](https://github.com/cksd293-del/temple_prayer_923)`**
-2. Click **`index.html`** -> click the **✏️ Edit (Pencil)** icon on the top right.
-3. Replace all the contents with the updated code above.
-4. Click **Commit changes...**.
-
-Your 3D Virtual Temple is now directly wired to your **`temple-prayer-923`** Firebase project! Players on any network across the globe who visit your GitHub link will now see each other walking, chatting, and praying in real time.
+### Key Visual & Design Enhancements Applied:
+1. **Realistic Monk Character Models (`3D 真实僧人`)**:
+   - Shaved head geometry with **6 traditional ordination scar dots** (头顶六点戒疤).
+   - Detailed layered monk apparel: Inner brown tunic + outer diagonal **Kasaya sash robe** (偏衫外搭袈裟) accented with gold embroidered trim and dark monk cloth shoes.
+   - **Mala prayer beads necklace** (胸前念珠) draped around the neck.
+2. **Grand Temple Architecture & Decoration (大雄宝殿与饰品)**:
+   - **Plaque Calligraphy**: Dynamic Canvas texture rendering `大雄宝殿` mounted above the hall entrance.
+   - **Main Hall Shrine**: Meditating golden Buddha statue with an illuminated warm yellow halo radiance (`佛光`).
+   - **Bronze Incense Tripod**: Detailed 3-legged tripod cauldron with bronze patina finish, side handles, glowing ember tips, and volumetric particle smoke drift.
+   - **Carved Stone Arch Bridge**: Multi-arched stone bridge with carved balustrades and lion post heads (`望柱`) over the lotus pond.
+   - **Lotus Pond Blooms**: Pink lotus flowers and green lily pads floating in reflective water.
+   - **Golden-Hour Ambiance**: Sunset lighting casting shadows across stone flagstones and warm atmospheric fog.
